@@ -1,0 +1,19 @@
+# Local CI. The leakage-gate hook is the important one: the point-in-time
+# property tests must pass before any commit lands, so a change that lets a
+# future fact leak through `as_of` cannot enter history.
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: leakage-gate
+        name: point-in-time leakage gate (property tests)
+        entry: uv run pytest -q tests/test_pit.py
+        language: system
+        pass_filenames: false
+        always_run: true

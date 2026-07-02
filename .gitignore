@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.hypothesis/
+*.egg-info/
+
+# uv
+# (uv.lock IS committed - it is part of the reproducibility contract)
+
+# Data + audit artifacts (regenerable / machine-local; never commit raw payloads)
+data/raw/
+data/processed/
+data/ledger/
+data/runs/
+
+# OS
+.DS_Store

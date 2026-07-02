@@ -1,0 +1,31 @@
+[
+  {
+    "id": "12345",
+    "title": "FIFA World Cup 2026 Winner",
+    "slug": "fifa-world-cup-2026-winner",
+    "markets": [
+      {
+        "conditionId": "0xabc123",
+        "questionId": "0xdef456",
+        "question": "Will Argentina win the 2026 FIFA World Cup?",
+        "description": "Resolves YES if Argentina wins the 2026 FIFA World Cup final.",
+        "slug": "argentina-win-wc-2026",
+        "endDate": "2026-07-19T22:00:00Z",
+        "liquidity": "45230.50",
+        "tokens": ["0xtoken_yes_001", "0xtoken_no_001"],
+        "resolutionSource": "Official FIFA match records"
+      },
+      {
+        "conditionId": "0xabc124",
+        "questionId": "0xdef457",
+        "question": "Will France win the 2026 FIFA World Cup?",
+        "description": "Resolves YES if France wins the 2026 FIFA World Cup final.",
+        "slug": "france-win-wc-2026",
+        "endDate": "2026-07-19T22:00:00Z",
+        "liquidity": "38100.00",
+        "tokens": ["0xtoken_yes_002", "0xtoken_no_002"],
+        "resolutionSource": "Official FIFA match records"
+      }
+    ]
+  }
+]

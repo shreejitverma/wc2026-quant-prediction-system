@@ -1,0 +1,175 @@
+# Canonical team name crosswalk.
+# canonical: the internal standard (FIFA English form)
+# aliases: every source-specific string we have seen for this team
+#
+# Sources covered:
+#   martj42 (M), eloratings.net 2-letter code (E), Kalshi ticker suffix (K)
+#
+# 48 WC2026 participants + common historical teams.
+# Add fuzzy-match candidates here after human review; never add unconfirmed names.
+
+teams:
+  # Group A
+  - canonical: "USA"
+    aliases: ["United States", "United States of America", "US", "USA", "US Men", "USMNT"]
+  - canonical: "Mexico"
+    aliases: ["MX", "MEX", "Mexico City"]
+  - canonical: "Canada"
+    aliases: ["CA", "CAN"]
+  - canonical: "Panama"
+    aliases: ["PA", "PAN"]
+
+  # Group B
+  - canonical: "Argentina"
+    aliases: ["AR", "ARG"]
+  - canonical: "Chile"
+    aliases: ["CH", "CHI"]
+  - canonical: "Peru"
+    aliases: ["PE", "PER"]
+  - canonical: "Australia"
+    aliases: ["AU", "AUS"]
+
+  # Group C
+  - canonical: "Spain"
+    aliases: ["ES", "ESP"]
+  - canonical: "Croatia"
+    aliases: ["HR", "CRO"]
+  - canonical: "Morocco"
+    aliases: ["MA", "MAR"]
+  - canonical: "DR Congo"
+    aliases: ["CD", "COD", "Congo DR", "Congo, DR", "Democratic Republic of Congo"]
+
+  # Group D
+  - canonical: "France"
+    aliases: ["FR", "FRA"]
+  - canonical: "Paraguay"
+    aliases: ["PY", "PAR"]
+  - canonical: "Uruguay"
+    aliases: ["UY", "URU"]
+  - canonical: "Algeria"
+    aliases: ["DZ", "ALG"]
+
+  # Group E
+  - canonical: "Germany"
+    aliases: ["DE", "GER", "West Germany"]
+  - canonical: "Japan"
+    aliases: ["JP", "JPN"]
+  - canonical: "South Korea"
+    aliases: ["KO", "KOR", "Korea Republic", "Republic of Korea", "Korea"]
+  - canonical: "Bahrain"
+    aliases: ["BH", "BHR"]
+
+  # Group F
+  - canonical: "Portugal"
+    aliases: ["PT", "POR"]
+  - canonical: "Brazil"
+    aliases: ["BR", "BRA"]
+  - canonical: "Colombia"
+    aliases: ["CO", "COL"]
+  - canonical: "Ecuador"
+    aliases: ["EC", "ECU"]
+
+  # Group G
+  - canonical: "Netherlands"
+    aliases: ["NL", "NED", "Holland", "The Netherlands"]
+  - canonical: "Egypt"
+    aliases: ["EG", "EGY"]
+  - canonical: "Venezuela"
+    aliases: ["VE", "VEN"]
+  - canonical: "Saudi Arabia"
+    aliases: ["SA", "KSA", "KSA", "Saudi"]
+
+  # Group H
+  - canonical: "England"
+    aliases: ["EN", "ENG", "Great Britain", "GB"]
+  - canonical: "Senegal"
+    aliases: ["SN", "SEN"]
+  - canonical: "Serbia"
+    aliases: ["RS", "SRB"]
+  - canonical: "Trinidad and Tobago"
+    aliases: ["TT", "TRI", "Trinidad & Tobago"]
+
+  # Group I
+  - canonical: "Italy"
+    aliases: ["IT", "ITA"]
+  - canonical: "Norway"
+    aliases: ["NO", "NOR"]
+  - canonical: "Ivory Coast"
+    aliases: ["CI", "CIV", "Cote d'Ivoire", "Cote dIvoire", "Côte d'Ivoire"]
+
+
+  # Group J
+  - canonical: "Switzerland"
+    aliases: ["CH", "SUI", "SWI"]  # Note: CH is also Chile code; context needed
+  - canonical: "Denmark"
+    aliases: ["DK", "DEN"]
+  - canonical: "New Zealand"
+    aliases: ["NZ", "NZL"]
+  - canonical: "Austria"
+    aliases: ["AT", "AUT"]
+
+  # Group K
+  - canonical: "Belgium"
+    aliases: ["BE", "BEL"]
+  - canonical: "Turkey"
+    aliases: ["TR", "TUR"]
+  - canonical: "Ukraine"
+    aliases: ["UA", "UKR"]
+  - canonical: "Ghana"
+    aliases: ["GH", "GHA"]
+
+  # Group L
+  - canonical: "Iran"
+    aliases: ["IR", "IRN", "Islamic Republic of Iran"]
+  - canonical: "Nigeria"
+    aliases: ["NG", "NGA"]
+  - canonical: "Poland"
+    aliases: ["PL", "POL"]
+  - canonical: "Guatemala"
+    aliases: ["GT", "GUA"]
+
+  # Historical teams (for full training history)
+  - canonical: "Soviet Union"
+    aliases: ["SU", "URS", "USSR"]
+  - canonical: "Czechoslovakia"
+    aliases: ["CS", "TCH"]
+  - canonical: "Yugoslavia"
+    aliases: ["YU", "YUG"]
+  - canonical: "Scotland"
+    aliases: ["SC", "SCO"]
+  - canonical: "Wales"
+    aliases: ["WL", "WAL"]
+  - canonical: "Sweden"
+    aliases: ["SE", "SWE"]
+  - canonical: "Hungary"
+    aliases: ["HU", "HUN"]
+  - canonical: "Romania"
+    aliases: ["RO", "ROU"]
+  - canonical: "Russia"
+    aliases: ["RU", "RUS"]
+  - canonical: "China"
+    aliases: ["CN", "CHN", "PR China"]
+  - canonical: "Tunisia"
+    aliases: ["TN", "TUN"]
+  - canonical: "Cameroon"
+    aliases: ["CM", "CMR"]
+  - canonical: "Costa Rica"
+    aliases: ["CR", "CRC"]
+  - canonical: "Honduras"
+    aliases: ["HN", "HON"]
+  - canonical: "Bolivia"
+    aliases: ["BO", "BOL"]
+  - canonical: "Qatar"
+    aliases: ["QA", "QAT"]
+  - canonical: "Greece"
+    aliases: ["GR", "GRE"]
+  - canonical: "Czech Republic"
+    aliases: ["CZ", "CZE"]
+  - canonical: "Slovakia"
+    aliases: ["SK", "SVK"]
+  - canonical: "Slovenia"
+    aliases: ["SI", "SVN"]
+  - canonical: "Ireland"
+    aliases: ["IE", "IRL", "Republic of Ireland"]
+  - canonical: "Northern Ireland"
+    aliases: ["NIR"]

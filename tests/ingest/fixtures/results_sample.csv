@@ -1,0 +1,9 @@
+date,home_team,away_team,home_score,away_score,tournament,city,country,neutral
+2026-06-11,Mexico,Qatar,2,0,FIFA World Cup,Los Angeles,USA,TRUE
+2026-06-12,England,Argentina,1,1,FIFA World Cup,New York City,USA,TRUE
+2026-06-12,Brazil,France,3,2,FIFA World Cup,Miami,USA,FALSE
+2022-11-20,Qatar,Ecuador,0,2,FIFA World Cup,Al Khor,Qatar,FALSE
+2022-11-21,England,Iran,6,2,FIFA World Cup,Al Khor,Qatar,FALSE
+2024-07-15,Spain,England,2,1,UEFA Euro,Berlin,Germany,TRUE
+2024-03-26,Brazil,Spain,3,3,Friendly,Madrid,Spain,TRUE
+2026-06-20,USA,Canada,1,0,FIFA World Cup,San Francisco,USA,FALSE
