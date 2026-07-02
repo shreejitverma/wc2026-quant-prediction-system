@@ -5,40 +5,41 @@ Strip away the phase numbering and everything below is either *the loop* (turnin
 
 ## The loop (data -> belief -> price -> quote -> fill)
 
-```
-                 ┌─────────────────────────────────────────────────────────────┐
-                 │                     HONESTY HARNESS                           │
-                 │  append-only ledger · hash-everything · pre-registration ·   │
-                 │  model tournament (proper scores + CLV as north star)        │
-                 └─────────────────────────────────────────────────────────────┘
-                                   ▲ instruments every stage ▼
+```mermaid
+flowchart TD
+    subgraph Ingestion
+        A[Tier1: Results/Elo] --> Raw[(Immutable Raw Store)]
+        B[Tier2: Squads/Player] --> Raw
+        C[Tier3: Kalshi/Poly Books] --> Raw
+        D[Tier4: Venue/Weather] --> Raw
+    end
 
-  ingest (batch + event-driven)
-      │   Tier1 results/Elo · Tier2 squad/player · Tier3 Kalshi/Poly books ·
-      │   Tier4 venue/weather/ref · Tier5 LLM news (router, never a signal)
-      ▼
-  immutable raw store (dated, as-received)  ──►  clean / normalize  ──►
-      ▼
-  point-in-time feature store   [ get_features(match_id, as_of_ts) — the ONE gate ]
-      ▼
-  model layer  (M1 Dixon-Coles · M2 state-space · M3 Bayesian hierarchical ·
-      │         M4 player-aggregation · M5 gradient boosting · M6 market-implied)
-      ▼         every model -> full scoreline distribution, common interface
-  meta-model / ensembler  (out-of-sample proper scores only; shrink to market)
-      ▼
-  tournament simulation engine  (exact 2026 rules; 100k–1M paths; persists the
-      │                          FULL JOINT DRAW MATRIX — the crown jewel)
-      ▼
-  fair-value pricer  (fees · settlement timing/discount · resolution risk ·
-      │               uncertainty band from the Phase 3 uncertainty layer)
-      ▼
-  contract mapper  [ HARD GATE: settlement text parsed & matched before pricing ]
-      ▼
-  quoting engine  (spread/size = f(uncertainty, edge, inventory, adverse selection))
-      ▼
-  execution:  PaperExchange (recorded books)  ──promotion gate──►  live clients
-      ▼
-  append-only prediction & order ledger  ──►  evaluation / model racing
+    subgraph Data Processing
+        Raw --> Clean[Clean & Normalize]
+        Clean --> PIT[Point-in-Time Gate]
+        PIT --> FS[(Feature Store)]
+    end
+
+    subgraph Modeling Suite
+        FS --> M1[M1: Dixon-Coles]
+        FS --> M2[M2: State-Space]
+        FS --> M3[M3: Bayesian Hierarchical]
+        FS --> M4[M4: Player-Agg]
+        M1 & M2 & M3 & M4 --> Meta[Meta-Model Ensembler]
+    end
+
+    subgraph Pricing & Execution
+        Meta --> Sim[Tournament Sim: 100k Paths]
+        Sim --> FV[Fair-Value Pricer]
+        FV --> Mapper[Contract Mapper]
+        Mapper --> Quote[Quoting Engine]
+        Quote --> Exec[Execution: PaperExchange]
+    end
+
+    subgraph Honesty Harness
+        Exec -.-> Ledger[(Append-Only Ledger)]
+        Ledger -.-> Eval[Model Racing / Backtest]
+    end
 ```
 
 ## The harness (why the loop can be trusted)
@@ -69,12 +70,12 @@ See `docs/adr/0002-storage-stack-duckdb-parquet.md`.
 
 | Phase | Name | Status |
 |------|------|--------|
-| 0 | Architecture, documentation, experiment discipline | **built (this delivery)** |
-| 1 | Data & intelligence acquisition | next |
-| 2 | Point-in-time feature store | pending |
-| 3 | Model suite (M1–M6 + ensembler + uncertainty) | pending |
-| 4 | Tournament simulation engine (joint distribution) | pending |
-| 5 | Fair value, contract mapping, cross-venue pricing | pending |
-| 6 | Market-making & execution engine (paper -> live) | pending |
-| 7 | Evaluation, model racing, backtesting | pending |
-| 8 | Live operations, in-play option, model decay | pending |
+| 0 | Architecture, documentation, experiment discipline | **built** |
+| 1 | Data & intelligence acquisition | **built** |
+| 2 | Point-in-time feature store | **built** |
+| 3 | Model suite (M1–M6 + ensembler + uncertainty) | **built** |
+| 4 | Tournament simulation engine (joint distribution) | **built** |
+| 5 | Fair value, contract mapping, cross-venue pricing | **built** |
+| 6 | Market-making & execution engine (paper -> live) | **built** |
+| 7 | Evaluation, model racing, backtesting | **built** |
+| 8 | Live operations, in-play option, model decay | **built** |

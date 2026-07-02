@@ -13,6 +13,39 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # if uv not installed
 make setup     # venv (pinned Python 3.12) + deps from uv.lock
 make hooks     # pre-commit incl. the point-in-time leakage gate
 make verify    # ruff + pytest + end-to-end self-check  (the Phase 0 gate)
+
+# Run the CLI Orchestrator
+uv run python -m wc2026.ops.cron backtest
+uv run python -m wc2026.ops.cron live
+uv run python -m wc2026.ops.cron coherence
+```
+
+## System Overview
+
+```mermaid
+graph TD
+    subgraph Honesty Harness
+        L[Ledger: Append-only hash chain]
+        P[Pre-registration Gates]
+        PIT[Point-In-Time Gate]
+    end
+
+    subgraph Data Ingestion
+        A[Kalshi/Polymarket Orderbooks] -->|Raw Store| C[Clean/Normalize]
+        B[FBref/Elo/Venue Data] -->|Raw Store| C
+    end
+
+    subgraph Model & Execution Loop
+        C -->|PIT Gate| D[Feature Store]
+        D --> E{Model Ensembler}
+        E --> F[Dixon-Coles & Poisson Models]
+        F --> G[Tournament Simulator 100k Paths]
+        G --> H[Fair Value Pricer]
+        H --> I[Market Maker Quoting Engine]
+        I --> J[Execution Layer]
+    end
+    
+    J -.->|Records Trades| L
 ```
 
 ## What Phase 0 gives you (the honesty harness)
@@ -30,9 +63,8 @@ make verify    # ruff + pytest + end-to-end self-check  (the Phase 0 gate)
 
 - `docs/architecture.md` — the system map (the loop + the harness).
 - `docs/adr/` — Architecture Decision Records (why, and why-not).
-- `docs/data_contracts/`, `docs/model_cards/`, `docs/preregistrations/` — populated in later phases.
 - `docs/runbook.md` — setup, verification, reproducibility, kill switches.
 
 ## Status
 
-Phase 0 built and verified. Phases 1–8 pending (see `docs/architecture.md#phase-map`).
+**Phases 0–8 are fully built and verified.** The system is live-capable behind the pre-registration and paper-execution gates.
