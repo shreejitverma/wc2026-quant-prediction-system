@@ -21,8 +21,8 @@ until the execution phase, where they stay server-side).
 from __future__ import annotations
 
 import math
-from datetime import datetime, timezone
 import random
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Query, WebSocket
@@ -407,14 +407,14 @@ def get_match_detail(match_id: str, state: StateDep) -> Envelope[MatchDetail]:
         group=fx["group"],
         home_team=fx["home"],
         away_team=fx["away"],
-        kickoff_utc=to_iso(datetime.fromtimestamp(kickoff, tz=timezone.utc)),
+        kickoff_utc=to_iso(datetime.fromtimestamp(kickoff, tz=UTC)),
         venue=fx["venue"],
         rest_days_home=fx["rest_home"],
         rest_days_away=fx["rest_away"],
         lineup=LineupStatus(
             state="confirmed" if fx["lineup_confirmed"] else "expected",
             as_of=now_iso,
-            confirmed_at=to_iso(datetime.fromtimestamp(now.timestamp() - 40 * 60, tz=timezone.utc))
+            confirmed_at=to_iso(datetime.fromtimestamp(now.timestamp() - 40 * 60, tz=UTC))
             if fx["lineup_confirmed"]
             else None,
         ),
@@ -430,7 +430,7 @@ def get_match_detail(match_id: str, state: StateDep) -> Envelope[MatchDetail]:
         ensemble=model_row("ensemble", "meta-1.0", None, core["ensemble_matrix"]),
         market=MarketBaseline(
             venue="kalshi",
-            as_of=to_iso(datetime.fromtimestamp(now.timestamp() - 15 * 60, tz=timezone.utc)),
+            as_of=to_iso(datetime.fromtimestamp(now.timestamp() - 15 * 60, tz=UTC)),
             overround=1.045,
             p_home=market["home"],
             p_draw=market["draw"],
@@ -459,7 +459,7 @@ def get_match_timeline(match_id: str, state: StateDep) -> Envelope[MatchTimeline
         market = mkt_home * (1 - frac) + fair * frac + rng.uniform(-0.012, 0.012)
         points.append(
             TimelinePoint(
-                ts_utc=to_iso(datetime.fromtimestamp(t, tz=timezone.utc)),
+                ts_utc=to_iso(datetime.fromtimestamp(t, tz=UTC)),
                 market=round(min(0.99, max(0.01, market)), 4),
                 fair=round(fair, 4),
                 lo=round(max(0.0, fair - half), 4),
@@ -468,12 +468,12 @@ def get_match_timeline(match_id: str, state: StateDep) -> Envelope[MatchTimeline
         )
     events = [
         TimelineEvent(
-            ts_utc=to_iso(datetime.fromtimestamp(now_s - 30 * 3600, tz=timezone.utc)),
+            ts_utc=to_iso(datetime.fromtimestamp(now_s - 30 * 3600, tz=UTC)),
             kind="news",
             label="Keeper fitness doubt reported",
         ),
         TimelineEvent(
-            ts_utc=to_iso(datetime.fromtimestamp(lineup_at, tz=timezone.utc)),
+            ts_utc=to_iso(datetime.fromtimestamp(lineup_at, tz=UTC)),
             kind="lineup",
             label="Expected XI news",
         ),
