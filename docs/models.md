@@ -10,9 +10,11 @@ A classic Poisson model inherently assumes that the goals scored by the Home tea
 
 ### Base Poisson Probabilities
 The baseline independent expectation of a match outcome is defined as:
+
 $$
 P(X=x, Y=y) = \frac{e^{-\lambda} \lambda^x}{x!} \frac{e^{-\mu} \mu^y}{y!}
 $$
+
 Where:
 - $\lambda = \alpha_i \beta_j \gamma$ (Home Expected Goals)
 - $\mu = \alpha_j \beta_i$ (Away Expected Goals)
@@ -36,9 +38,11 @@ $$
 
 ### Exponential Time Decay
 To prioritize recent form without discarding historical sample sizes, we discount past matches exponentially when calculating the Log-Likelihood:
+
 $$
 w(t) = e^{-\xi \Delta t}
 $$
+
 Where $\Delta t$ is the number of days between the match and today, and $\xi$ is the decay half-life (set to $0.004$ empirically).
 
 ---
@@ -49,9 +53,11 @@ While M1 fits a static optimization over the entire dataset, M2 behaves like a r
 
 ### Update Rule (Gradient Descent)
 For every match played, we calculate the expected goals using the current state ratings:
+
 $$
 \lambda_{home} = \exp(Att_{home} - Def_{away} + H_{adv})
 $$
+
 $$
 \lambda_{away} = \exp(Att_{away} - Def_{home})
 $$
@@ -59,12 +65,15 @@ $$
 We then perform a discrete gradient descent step on the Poisson log-likelihood. The gradient of the log-likelihood with respect to the $\log(\lambda)$ parameter simplifies elegantly to the residual error ($Goals_{actual} - Goals_{expected}$). 
 
 Therefore, the state update step after a match is simply:
+
 $$
 Att_{home, t+1} = Att_{home, t} + \alpha (Goals_{home} - \lambda_{home})
 $$
+
 $$
 Def_{away, t+1} = Def_{away, t} - \alpha (Goals_{home} - \lambda_{home})
 $$
+
 *(Where $\alpha$ is the `learning_rate` hyperparameter)*.
 
 ---
@@ -75,28 +84,35 @@ M3 utilizes `numpyro` to sample the full posterior joint distribution of team st
 
 ### Statistical Model Structure
 **Priors**:
+
 $$
 Intercept \sim \mathcal{N}(1.0, 0.5)
 $$
+
 $$
 H_{adv} \sim \mathcal{N}(0.2, 0.2)
 $$
+
 $$
 Att_i \sim \mathcal{N}(0, \sigma_{att}) \quad \forall \text{ teams } i
 $$
+
 $$
 Def_i \sim \mathcal{N}(0, \sigma_{def}) \quad \forall \text{ teams } i
 $$
 
 To make the system mathematically identifiable, we enforce a soft sum-to-zero constraint by centering the samples:
+
 $$
 \sum_{i} Att_i = 0 \quad \text{and} \quad \sum_{i} Def_i = 0
 $$
 
 **Log-Expected Goals (Link Function)**:
+
 $$
 \theta_{home} = \exp(Intercept + H_{adv} + Att_{home} - Def_{away})
 $$
+
 $$
 \theta_{away} = \exp(Intercept + Att_{away} - Def_{home})
 $$
@@ -129,8 +145,11 @@ Where $\hat{p}_{i,c}$ is the blended probability of outcome $c$ for match $i$.
 The system supports two methods of blending the individual model matrices ($P_m$):
 
 1. **Linear Pooling** (Arithmetic Mean):
+
    $$ P_{ensemble} = \sum_{m=1}^M w_m P_m $$
+
 2. **Log-Opinion Pooling** (Geometric Mean / Preferred Method):
+
    $$ P_{ensemble} \propto \exp \left( \sum_{m=1}^M w_m \log(P_m) \right) $$
 
 Log-Opinion pooling is generally preferred in our architecture because it acts as a more aggressive "veto". If a single structurally sound model assigns a near-zero probability to a tail event, the ensemble probability drops dramatically, preserving the rigorous priors.
