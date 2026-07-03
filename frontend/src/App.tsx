@@ -14,6 +14,7 @@ import ModelsPage from "@/pages/Models";
 import PerformancePage from "@/pages/Performance";
 import LedgerPage from "@/pages/Ledger";
 import OpsPage from "@/pages/Ops";
+import MatchdayPage from "@/pages/Matchday";
 
 /** Terminal shell: rail + status strip + routed content (ADR-0013).
  * Route table mirrors NAV_ITEMS in Sidebar; both change together. */
@@ -39,6 +40,7 @@ export function App() {
                 <Route path="/performance" element={<PerformancePage />} />
                 <Route path="/ledger" element={<LedgerPage />} />
                 <Route path="/ops" element={<OpsPage />} />
+                <Route path="/matchday" element={<MatchdayPage />} />
               </Routes>
             </main>
           </div>

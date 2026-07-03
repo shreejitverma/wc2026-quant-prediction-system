@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { fetchLedger, fetchLedgerVerify, fetchRuns } from "@/lib/api";
+import { fetchLedger, fetchLedgerVerify, fetchPrereg, fetchRuns } from "@/lib/api";
 import { useTopic } from "@/lib/wsHooks";
 import { ProvenanceChip } from "@/components/Provenance";
 import { localWithOffset, utcShort } from "@/lib/time";
@@ -32,6 +32,7 @@ export default function LedgerPage() {
   });
   const verify = useQuery({ queryKey: ["ledger-verify"], queryFn: fetchLedgerVerify });
   const runs = useQuery({ queryKey: ["runs"], queryFn: fetchRuns });
+  const prereg = useQuery({ queryKey: ["prereg"], queryFn: fetchPrereg });
 
   useTopic("ledger", () => {
     queryClient.invalidateQueries({ queryKey: ["ledger"] });
@@ -190,6 +191,40 @@ export default function LedgerPage() {
                 ))}
               </TableBody>
             </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Pre-registration gates as first-class objects (Phase 5): what was
+          frozen, the threshold, current status. Moving a goalpost is visible
+          here, not easy. REAL data - parsed from docs/preregistrations. */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">Pre-registration gates</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {(prereg.data?.data.gates ?? []).length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              0 gates registered — definitive. A live promotion without a frozen gate here is a
+              process violation, not an oversight.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {(prereg.data?.data.gates ?? []).map((g) => (
+                <div key={g.gate_id} className="rounded border border-border px-3 py-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold">{g.title}</span>
+                    <Badge variant="outline" className="font-mono text-[10px] uppercase">
+                      {g.status}
+                    </Badge>
+                  </div>
+                  <p className="mt-1 font-mono text-xs text-muted-foreground">
+                    metric: {g.metric ?? "—"} · threshold: {g.threshold ?? "—"} · frozen:{" "}
+                    {g.frozen_at ?? "—"} · {g.path}
+                  </p>
+                </div>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>

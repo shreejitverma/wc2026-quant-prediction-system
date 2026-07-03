@@ -86,6 +86,35 @@ export async function fetchCoherence(): Promise<Envelope<CoherenceReport>> {
 export type TournamentState = components["schemas"]["TournamentState"];
 export type ConsoleState = components["schemas"]["ConsoleState"];
 export type AlertsPage = components["schemas"]["AlertsPage"];
+export type ClvReport = components["schemas"]["ClvReport"];
+export type CalibrationReport = components["schemas"]["CalibrationReport"];
+export type ModelRaceReport = components["schemas"]["ModelRaceReport"];
+export type PnlReport = components["schemas"]["PnlReport"];
+export type PreregPage = components["schemas"]["PreregPage"];
+export type CIValue = components["schemas"]["CIValue"];
+
+export async function fetchClv(): Promise<Envelope<ClvReport>> {
+  return unwrap(await client.GET("/api/v1/eval/clv"), "GET /api/v1/eval/clv");
+}
+
+export async function fetchCalibration(model: string): Promise<Envelope<CalibrationReport>> {
+  return unwrap(
+    await client.GET("/api/v1/eval/calibration", { params: { query: { model } } }),
+    "GET /api/v1/eval/calibration",
+  );
+}
+
+export async function fetchModelRace(): Promise<Envelope<ModelRaceReport>> {
+  return unwrap(await client.GET("/api/v1/eval/model-race"), "GET /api/v1/eval/model-race");
+}
+
+export async function fetchPnl(): Promise<Envelope<PnlReport>> {
+  return unwrap(await client.GET("/api/v1/eval/pnl"), "GET /api/v1/eval/pnl");
+}
+
+export async function fetchPrereg(): Promise<Envelope<PreregPage>> {
+  return unwrap(await client.GET("/api/v1/prereg"), "GET /api/v1/prereg");
+}
 export type Alert = components["schemas"]["Alert"];
 export type OpsFreshness = components["schemas"]["OpsFreshness"];
 

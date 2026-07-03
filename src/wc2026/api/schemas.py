@@ -542,3 +542,100 @@ class ReconciliationRow(BaseModel):
 class OpsFreshness(BaseModel):
     sources: list[FreshnessSource]
     reconciliation: list[ReconciliationRow]
+
+
+# --- Evaluation pages (Phase 5). REAL statistics (eval.metrics: bootstrap
+# CIs, Diebold-Mariano) over the mock resolved-events table (mock_eval.py).
+# Every aggregate carries n; every score carries its interval. ---
+
+
+class CIValue(BaseModel):
+    value: float
+    ci_lo: float
+    ci_hi: float
+    n: int
+
+
+class ClvByClass(BaseModel):
+    market_class: str
+    mean_pp: CIValue
+
+
+class ClvPoint(BaseModel):
+    ts_utc: str
+    cum_pp: float
+
+
+class ClvHistBin(BaseModel):
+    lo_pp: float
+    hi_pp: float
+    count: int
+
+
+class ClvReport(BaseModel):
+    mean_pp: CIValue = Field(description="Headline: mean close-vs-entry move in prob points.")
+    cumulative: list[ClvPoint]
+    histogram: list[ClvHistBin]
+    by_class: list[ClvByClass]
+
+
+class CalibrationBin(BaseModel):
+    p_mid: float
+    n: int
+    empirical: float
+    ci_lo: float = Field(description="Wilson 95% on the empirical frequency.")
+    ci_hi: float
+
+
+class CalibrationReport(BaseModel):
+    model: str
+    n_total: int
+    bins: list[CalibrationBin]
+
+
+class RaceRow(BaseModel):
+    model: str
+    log_loss: CIValue
+    brier: CIValue
+    dm_vs_market: float = Field(description="DM statistic on log-loss diffs vs the de-vigged market; negative = better than market.")
+    dm_significant: bool
+    weight: float | None = Field(description="Current ensemble weight; null for market baseline.")
+
+
+class WeightsPoint(BaseModel):
+    ts_utc: str
+    weights: dict[str, float]
+
+
+class ModelRaceReport(BaseModel):
+    n: int
+    rows: list[RaceRow] = Field(description="Sorted by log_loss; includes 'ensemble' and 'market' rows.")
+    weights_over_time: list[WeightsPoint]
+
+
+class PnlPoint(BaseModel):
+    ts_utc: str
+    cum_pnl: float
+    drawdown: float
+
+
+class PnlReport(BaseModel):
+    mode: Literal["paper", "live"]
+    n_trades: int
+    points: list[PnlPoint]
+    max_drawdown: float
+    kelly_fraction: float = Field(description="Fraction of full Kelly actually staked (config).")
+
+
+class PreregGate(BaseModel):
+    gate_id: str
+    title: str
+    status: str
+    metric: str | None
+    threshold: str | None
+    frozen_at: str | None
+    path: str
+
+
+class PreregPage(BaseModel):
+    gates: list[PreregGate]

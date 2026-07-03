@@ -182,6 +182,94 @@
         "title": "BookLevel",
         "type": "object"
       },
+      "CIValue": {
+        "properties": {
+          "ci_hi": {
+            "title": "Ci Hi",
+            "type": "number"
+          },
+          "ci_lo": {
+            "title": "Ci Lo",
+            "type": "number"
+          },
+          "n": {
+            "title": "N",
+            "type": "integer"
+          },
+          "value": {
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "value",
+          "ci_lo",
+          "ci_hi",
+          "n"
+        ],
+        "title": "CIValue",
+        "type": "object"
+      },
+      "CalibrationBin": {
+        "properties": {
+          "ci_hi": {
+            "title": "Ci Hi",
+            "type": "number"
+          },
+          "ci_lo": {
+            "description": "Wilson 95% on the empirical frequency.",
+            "title": "Ci Lo",
+            "type": "number"
+          },
+          "empirical": {
+            "title": "Empirical",
+            "type": "number"
+          },
+          "n": {
+            "title": "N",
+            "type": "integer"
+          },
+          "p_mid": {
+            "title": "P Mid",
+            "type": "number"
+          }
+        },
+        "required": [
+          "p_mid",
+          "n",
+          "empirical",
+          "ci_lo",
+          "ci_hi"
+        ],
+        "title": "CalibrationBin",
+        "type": "object"
+      },
+      "CalibrationReport": {
+        "properties": {
+          "bins": {
+            "items": {
+              "$ref": "#/components/schemas/CalibrationBin"
+            },
+            "title": "Bins",
+            "type": "array"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "n_total": {
+            "title": "N Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "model",
+          "n_total",
+          "bins"
+        ],
+        "title": "CalibrationReport",
+        "type": "object"
+      },
       "ClusterPosition": {
         "properties": {
           "avg_price": {
@@ -208,6 +296,101 @@
           "mark"
         ],
         "title": "ClusterPosition",
+        "type": "object"
+      },
+      "ClvByClass": {
+        "properties": {
+          "market_class": {
+            "title": "Market Class",
+            "type": "string"
+          },
+          "mean_pp": {
+            "$ref": "#/components/schemas/CIValue"
+          }
+        },
+        "required": [
+          "market_class",
+          "mean_pp"
+        ],
+        "title": "ClvByClass",
+        "type": "object"
+      },
+      "ClvHistBin": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "hi_pp": {
+            "title": "Hi Pp",
+            "type": "number"
+          },
+          "lo_pp": {
+            "title": "Lo Pp",
+            "type": "number"
+          }
+        },
+        "required": [
+          "lo_pp",
+          "hi_pp",
+          "count"
+        ],
+        "title": "ClvHistBin",
+        "type": "object"
+      },
+      "ClvPoint": {
+        "properties": {
+          "cum_pp": {
+            "title": "Cum Pp",
+            "type": "number"
+          },
+          "ts_utc": {
+            "title": "Ts Utc",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ts_utc",
+          "cum_pp"
+        ],
+        "title": "ClvPoint",
+        "type": "object"
+      },
+      "ClvReport": {
+        "properties": {
+          "by_class": {
+            "items": {
+              "$ref": "#/components/schemas/ClvByClass"
+            },
+            "title": "By Class",
+            "type": "array"
+          },
+          "cumulative": {
+            "items": {
+              "$ref": "#/components/schemas/ClvPoint"
+            },
+            "title": "Cumulative",
+            "type": "array"
+          },
+          "histogram": {
+            "items": {
+              "$ref": "#/components/schemas/ClvHistBin"
+            },
+            "title": "Histogram",
+            "type": "array"
+          },
+          "mean_pp": {
+            "$ref": "#/components/schemas/CIValue",
+            "description": "Headline: mean close-vs-entry move in prob points."
+          }
+        },
+        "required": [
+          "mean_pp",
+          "cumulative",
+          "histogram",
+          "by_class"
+        ],
+        "title": "ClvReport",
         "type": "object"
       },
       "CoherenceReport": {
@@ -452,6 +635,38 @@
         "title": "Envelope[AlertsPage]",
         "type": "object"
       },
+      "Envelope_CalibrationReport_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CalibrationReport"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          }
+        },
+        "required": [
+          "data",
+          "provenance"
+        ],
+        "title": "Envelope[CalibrationReport]",
+        "type": "object"
+      },
+      "Envelope_ClvReport_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ClvReport"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          }
+        },
+        "required": [
+          "data",
+          "provenance"
+        ],
+        "title": "Envelope[ClvReport]",
+        "type": "object"
+      },
       "Envelope_CoherenceReport_": {
         "properties": {
           "data": {
@@ -596,6 +811,22 @@
         "title": "Envelope[MatchTimeline]",
         "type": "object"
       },
+      "Envelope_ModelRaceReport_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ModelRaceReport"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          }
+        },
+        "required": [
+          "data",
+          "provenance"
+        ],
+        "title": "Envelope[ModelRaceReport]",
+        "type": "object"
+      },
       "Envelope_OpsFreshness_": {
         "properties": {
           "data": {
@@ -612,6 +843,22 @@
         "title": "Envelope[OpsFreshness]",
         "type": "object"
       },
+      "Envelope_PnlReport_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/PnlReport"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          }
+        },
+        "required": [
+          "data",
+          "provenance"
+        ],
+        "title": "Envelope[PnlReport]",
+        "type": "object"
+      },
       "Envelope_PortfolioState_": {
         "properties": {
           "data": {
@@ -626,6 +873,22 @@
           "provenance"
         ],
         "title": "Envelope[PortfolioState]",
+        "type": "object"
+      },
+      "Envelope_PreregPage_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/PreregPage"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          }
+        },
+        "required": [
+          "data",
+          "provenance"
+        ],
+        "title": "Envelope[PreregPage]",
         "type": "object"
       },
       "Envelope_RunOut_": {
@@ -1583,6 +1846,36 @@
         "title": "ModelProbs",
         "type": "object"
       },
+      "ModelRaceReport": {
+        "properties": {
+          "n": {
+            "title": "N",
+            "type": "integer"
+          },
+          "rows": {
+            "description": "Sorted by log_loss; includes 'ensemble' and 'market' rows.",
+            "items": {
+              "$ref": "#/components/schemas/RaceRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "weights_over_time": {
+            "items": {
+              "$ref": "#/components/schemas/WeightsPoint"
+            },
+            "title": "Weights Over Time",
+            "type": "array"
+          }
+        },
+        "required": [
+          "n",
+          "rows",
+          "weights_over_time"
+        ],
+        "title": "ModelRaceReport",
+        "type": "object"
+      },
       "MyQuotes": {
         "properties": {
           "active": {
@@ -1651,6 +1944,70 @@
           }
         },
         "title": "PauseResumeRequest",
+        "type": "object"
+      },
+      "PnlPoint": {
+        "properties": {
+          "cum_pnl": {
+            "title": "Cum Pnl",
+            "type": "number"
+          },
+          "drawdown": {
+            "title": "Drawdown",
+            "type": "number"
+          },
+          "ts_utc": {
+            "title": "Ts Utc",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ts_utc",
+          "cum_pnl",
+          "drawdown"
+        ],
+        "title": "PnlPoint",
+        "type": "object"
+      },
+      "PnlReport": {
+        "properties": {
+          "kelly_fraction": {
+            "description": "Fraction of full Kelly actually staked (config).",
+            "title": "Kelly Fraction",
+            "type": "number"
+          },
+          "max_drawdown": {
+            "title": "Max Drawdown",
+            "type": "number"
+          },
+          "mode": {
+            "enum": [
+              "paper",
+              "live"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "n_trades": {
+            "title": "N Trades",
+            "type": "integer"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/PnlPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          }
+        },
+        "required": [
+          "mode",
+          "n_trades",
+          "points",
+          "max_drawdown",
+          "kelly_fraction"
+        ],
+        "title": "PnlReport",
         "type": "object"
       },
       "PortfolioState": {
@@ -1725,6 +2082,86 @@
           "positions"
         ],
         "title": "PositionCluster",
+        "type": "object"
+      },
+      "PreregGate": {
+        "properties": {
+          "frozen_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frozen At"
+          },
+          "gate_id": {
+            "title": "Gate Id",
+            "type": "string"
+          },
+          "metric": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metric"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "threshold": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Threshold"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "gate_id",
+          "title",
+          "status",
+          "metric",
+          "threshold",
+          "frozen_at",
+          "path"
+        ],
+        "title": "PreregGate",
+        "type": "object"
+      },
+      "PreregPage": {
+        "properties": {
+          "gates": {
+            "items": {
+              "$ref": "#/components/schemas/PreregGate"
+            },
+            "title": "Gates",
+            "type": "array"
+          }
+        },
+        "required": [
+          "gates"
+        ],
+        "title": "PreregPage",
         "type": "object"
       },
       "ProbWithBand": {
@@ -1891,6 +2328,51 @@
           "skew"
         ],
         "title": "QuoteInputs",
+        "type": "object"
+      },
+      "RaceRow": {
+        "properties": {
+          "brier": {
+            "$ref": "#/components/schemas/CIValue"
+          },
+          "dm_significant": {
+            "title": "Dm Significant",
+            "type": "boolean"
+          },
+          "dm_vs_market": {
+            "description": "DM statistic on log-loss diffs vs the de-vigged market; negative = better than market.",
+            "title": "Dm Vs Market",
+            "type": "number"
+          },
+          "log_loss": {
+            "$ref": "#/components/schemas/CIValue"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "weight": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Current ensemble weight; null for market baseline.",
+            "title": "Weight"
+          }
+        },
+        "required": [
+          "model",
+          "log_loss",
+          "brier",
+          "dm_vs_market",
+          "dm_significant",
+          "weight"
+        ],
+        "title": "RaceRow",
         "type": "object"
       },
       "ReconciliationRow": {
@@ -2472,6 +2954,27 @@
         "title": "VenueStatus",
         "type": "object"
       },
+      "WeightsPoint": {
+        "properties": {
+          "ts_utc": {
+            "title": "Ts Utc",
+            "type": "string"
+          },
+          "weights": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Weights",
+            "type": "object"
+          }
+        },
+        "required": [
+          "ts_utc",
+          "weights"
+        ],
+        "title": "WeightsPoint",
+        "type": "object"
+      },
       "WidenRequest": {
         "properties": {
           "factor": {
@@ -2819,6 +3322,100 @@
         "summary": "Get Console"
       }
     },
+    "/api/v1/eval/calibration": {
+      "get": {
+        "operationId": "get_eval_calibration_api_v1_eval_calibration_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "model",
+            "required": false,
+            "schema": {
+              "default": "ensemble",
+              "title": "Model",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_CalibrationReport_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Eval Calibration"
+      }
+    },
+    "/api/v1/eval/clv": {
+      "get": {
+        "operationId": "get_eval_clv_api_v1_eval_clv_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ClvReport_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Eval Clv"
+      }
+    },
+    "/api/v1/eval/model-race": {
+      "get": {
+        "operationId": "get_eval_model_race_api_v1_eval_model_race_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ModelRaceReport_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Eval Model Race"
+      }
+    },
+    "/api/v1/eval/pnl": {
+      "get": {
+        "operationId": "get_eval_pnl_api_v1_eval_pnl_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_PnlReport_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Eval Pnl"
+      }
+    },
     "/api/v1/health": {
       "get": {
         "operationId": "get_health_api_v1_health_get",
@@ -3076,6 +3673,25 @@
           }
         },
         "summary": "Get Portfolio"
+      }
+    },
+    "/api/v1/prereg": {
+      "get": {
+        "description": "Real files, definitive empty state. The UI renders gates as first-class\nobjects so moving a goalpost is visible, not easy.",
+        "operationId": "get_prereg_api_v1_prereg_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_PreregPage_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Prereg"
       }
     },
     "/api/v1/runs": {

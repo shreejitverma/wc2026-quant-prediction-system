@@ -216,11 +216,19 @@ Command state is DERIVED FROM THE LEDGER (`kind="command"` entries; state = fold
 
 | Endpoint | Description | Phase |
 |----------|-------------|-------|
-| `GET /api/v1/contracts/{id}/fair-value` | Full fair-value decomposition waterfall | 3 |
-| `GET /api/v1/books/{ticker}` | Live orderbook depth + recent history | 3 |
-| `GET /api/v1/eval/*` | CLV measurement, calibration curves, model race | 5 |
-| `GET /api/v1/prereg` | Pre-registration status for active experiments | 5 |
-| `GET /api/v1/ops/*` | Pipeline freshness and cron history | 6 |
+| `GET /api/v1/contracts/{id}/fair-value` | Standalone decomposition endpoint (the board already inlines it) | 3 |
+| `GET /api/v1/books/{ticker}` | Live orderbook depth + recent history (console inlines a mock book today) | 3 |
+
+### Evaluation & Pre-registration (Phase 5)
+
+#### `GET /api/v1/eval/{clv, calibration, model-race, pnl}`
+**Status**: 🟡 **built — REAL statistics over the mock resolved table** (`api/mock_eval.py`, ~400 settled events). Per-observation losses, percentile-bootstrap CIs, and the Diebold–Mariano test live in `eval/metrics.py` as real pipeline code. Every aggregate carries `n`; every score carries its interval; calibration bins carry per-bin Wilson CIs and counts.
+
+#### `GET /api/v1/prereg`
+**Status**: ✅ **real** — parses `docs/preregistrations/*.md` (template/README excluded); 0 gates is a definitive answer. The Ledger page renders gates as first-class objects.
+
+#### `GET /api/v1/ops/{freshness}` + `GET /api/v1/alerts`
+**Status**: 🟡 built, mock (freshness/alert content) with ✅ real ledgered ack state — see the Phase 6 section above.
 
 ---
 

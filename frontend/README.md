@@ -77,3 +77,27 @@ npm run dev
 - `src/lib/api.ts`: Centralized fetcher logic wiring `TanStack Query` to the `http://localhost:8000/api` endpoints.
 - `src/store/tradingStore.ts`: The Zustand implementation holding the active array of trades and risk drawdown limits.
 - `src/components/MarketDepthPanel.tsx`: High-frequency WebSocket consumer for visualizing real-time trading depth.
+
+## Performance budget (Phase 6 hardening)
+
+Measured on the production build (`npm run build`, Vite 8):
+
+| Metric | Budget | Current |
+|---|---|---|
+| JS bundle (gzip) | < 200 KB | ~125 KB |
+| CSS (gzip) | < 20 KB | ~10 KB |
+| Production build time | < 5 s | ~0.3 s |
+| Route interaction (client-side nav) | < 100 ms | instant (SPA, cached queries) |
+
+If the JS budget is threatened (recharts is the heavy dependency), lazy-load
+the chart-bearing routes before reaching for anything more exotic.
+
+## E2E smoke tests
+
+`npm run test:e2e` (Playwright) boots a FastAPI instance against a scratch
+ledger root (`../e2e-data`, wiped per run) plus a Vite dev server on :3000,
+then drives the critical paths: mode banner truth, opportunity board rows +
+quarantine, the full kill-switch flow (typed phrase → ledgered command →
+KILLED strip → entry visible on the Ledger page), and matchday. The scratch
+root exists because the kill test really kills - and a kill in the real
+append-only ledger sticks until a CLI re-arm exists.

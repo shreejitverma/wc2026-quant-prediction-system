@@ -403,3 +403,67 @@ def test_freshness_status_consistent(client: TestClient) -> None:
     for s_ in body["sources"]:
         expected = "stale" if s_["staleness_seconds"] > s_["max_age_seconds"] else "ok"
         assert s_["status"] == expected
+
+
+# --- Phase 5: evaluation (real statistics over the mock resolved table) ------
+
+
+def test_clv_report_has_n_and_ci_everywhere(client: TestClient) -> None:
+    body = _envelope(client.get("/api/v1/eval/clv").json())["data"]
+    h = body["mean_pp"]
+    assert h["n"] == 400 and h["ci_lo"] <= h["value"] <= h["ci_hi"]
+    assert sum(b["count"] for b in body["histogram"]) == h["n"]
+    assert sum(c["mean_pp"]["n"] for c in body["by_class"]) == h["n"]
+    # Cumulative series ends at total CLV: the chart cannot disagree with the headline.
+    assert abs(body["cumulative"][-1]["cum_pp"] / h["n"] - h["value"]) < 0.5
+
+
+def test_calibration_bins_partition_sample(client: TestClient) -> None:
+    body = _envelope(client.get("/api/v1/eval/calibration?model=ensemble").json())["data"]
+    assert sum(b["n"] for b in body["bins"]) == body["n_total"]
+    for b in body["bins"]:
+        if b["n"] > 0:
+            assert b["ci_lo"] <= b["empirical"] <= b["ci_hi"]
+    assert client.get("/api/v1/eval/calibration?model=nope").status_code == 404
+
+
+def test_model_race_statistics(client: TestClient) -> None:
+    body = _envelope(client.get("/api/v1/eval/model-race").json())["data"]
+    rows = body["rows"]
+    scores = [r["log_loss"]["value"] for r in rows]
+    assert scores == sorted(scores), "league table must arrive sorted"
+    market = [r for r in rows if r["model"] == "market (de-vig)"][0]
+    assert market["dm_vs_market"] == 0.0 and not market["dm_significant"]
+    assert market["weight"] is None
+    ens = [r for r in rows if r["model"] == "ensemble"][0]
+    assert ens["log_loss"]["ci_lo"] < ens["log_loss"]["value"] < ens["log_loss"]["ci_hi"]
+    # Weights snapshot sums to ~1
+    w = body["weights_over_time"][-1]["weights"]
+    assert abs(sum(w.values()) - 1) < 1e-6
+
+
+def test_pnl_drawdown_invariants(client: TestClient) -> None:
+    body = _envelope(client.get("/api/v1/eval/pnl").json())["data"]
+    assert body["mode"] == "paper" and body["n_trades"] == 400
+    assert all(p["drawdown"] <= 1e-9 for p in body["points"])
+    assert body["max_drawdown"] <= 0
+
+
+def test_prereg_real_and_definitively_empty(client: TestClient, state: ApiState) -> None:
+    # Template/README are excluded; a temp root has no gates: definitive empty.
+    body = _envelope(client.get("/api/v1/prereg").json())
+    assert body["provenance"]["source"] == "real"
+    assert body["data"]["gates"] == []
+    # A real gate file is parsed.
+    d = state.root / "docs" / "preregistrations"
+    d.mkdir(parents=True)
+    (d / "PR-0001-test.md").write_text(
+        "# Pre-registration: PR-0001 lineup model beats DC\n\n- Status: frozen\n"
+        "- Date frozen (must precede any result): 2026-06-01\n\n## Metric\n\nCRPS on totals\n\n"
+        "## Decision rule & threshold\n\n- Threshold for \"success\" (numeric, decided now): CRPS delta > 0.004\n",
+        encoding="utf-8",
+    )
+    body2 = _envelope(client.get("/api/v1/prereg").json())["data"]
+    assert len(body2["gates"]) == 1
+    g = body2["gates"][0]
+    assert g["status"] == "frozen" and g["metric"] == "CRPS on totals" and g["frozen_at"] == "2026-06-01"

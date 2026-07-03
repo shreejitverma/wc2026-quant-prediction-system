@@ -162,6 +162,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/eval/calibration": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Eval Calibration */
+        get: operations["get_eval_calibration_api_v1_eval_calibration_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/eval/clv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Eval Clv */
+        get: operations["get_eval_clv_api_v1_eval_clv_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/eval/model-race": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Eval Model Race */
+        get: operations["get_eval_model_race_api_v1_eval_model_race_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/eval/pnl": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Eval Pnl */
+        get: operations["get_eval_pnl_api_v1_eval_pnl_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health": {
         parameters: {
             query?: never;
@@ -311,6 +379,27 @@ export interface paths {
          *     targets come from the REAL convex optimizer on a mock covariance.
          */
         get: operations["get_portfolio_api_v1_portfolio_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/prereg": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Prereg
+         * @description Real files, definitive empty state. The UI renders gates as first-class
+         *     objects so moving a goalpost is visible, not easy.
+         */
+        get: operations["get_prereg_api_v1_prereg_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -474,6 +563,42 @@ export interface components {
             /** Size */
             size: number;
         };
+        /** CIValue */
+        CIValue: {
+            /** Ci Hi */
+            ci_hi: number;
+            /** Ci Lo */
+            ci_lo: number;
+            /** N */
+            n: number;
+            /** Value */
+            value: number;
+        };
+        /** CalibrationBin */
+        CalibrationBin: {
+            /** Ci Hi */
+            ci_hi: number;
+            /**
+             * Ci Lo
+             * @description Wilson 95% on the empirical frequency.
+             */
+            ci_lo: number;
+            /** Empirical */
+            empirical: number;
+            /** N */
+            n: number;
+            /** P Mid */
+            p_mid: number;
+        };
+        /** CalibrationReport */
+        CalibrationReport: {
+            /** Bins */
+            bins: components["schemas"]["CalibrationBin"][];
+            /** Model */
+            model: string;
+            /** N Total */
+            n_total: number;
+        };
         /** ClusterPosition */
         ClusterPosition: {
             /** Avg Price */
@@ -484,6 +609,39 @@ export interface components {
             qty: number;
             /** Ticker */
             ticker: string;
+        };
+        /** ClvByClass */
+        ClvByClass: {
+            /** Market Class */
+            market_class: string;
+            mean_pp: components["schemas"]["CIValue"];
+        };
+        /** ClvHistBin */
+        ClvHistBin: {
+            /** Count */
+            count: number;
+            /** Hi Pp */
+            hi_pp: number;
+            /** Lo Pp */
+            lo_pp: number;
+        };
+        /** ClvPoint */
+        ClvPoint: {
+            /** Cum Pp */
+            cum_pp: number;
+            /** Ts Utc */
+            ts_utc: string;
+        };
+        /** ClvReport */
+        ClvReport: {
+            /** By Class */
+            by_class: components["schemas"]["ClvByClass"][];
+            /** Cumulative */
+            cumulative: components["schemas"]["ClvPoint"][];
+            /** Histogram */
+            histogram: components["schemas"]["ClvHistBin"][];
+            /** @description Headline: mean close-vs-entry move in prob points. */
+            mean_pp: components["schemas"]["CIValue"];
         };
         /** CoherenceReport */
         CoherenceReport: {
@@ -567,6 +725,16 @@ export interface components {
             data: components["schemas"]["AlertsPage"];
             provenance: components["schemas"]["Provenance"];
         };
+        /** Envelope[CalibrationReport] */
+        Envelope_CalibrationReport_: {
+            data: components["schemas"]["CalibrationReport"];
+            provenance: components["schemas"]["Provenance"];
+        };
+        /** Envelope[ClvReport] */
+        Envelope_ClvReport_: {
+            data: components["schemas"]["ClvReport"];
+            provenance: components["schemas"]["Provenance"];
+        };
         /** Envelope[CoherenceReport] */
         Envelope_CoherenceReport_: {
             data: components["schemas"]["CoherenceReport"];
@@ -612,14 +780,29 @@ export interface components {
             data: components["schemas"]["MatchTimeline"];
             provenance: components["schemas"]["Provenance"];
         };
+        /** Envelope[ModelRaceReport] */
+        Envelope_ModelRaceReport_: {
+            data: components["schemas"]["ModelRaceReport"];
+            provenance: components["schemas"]["Provenance"];
+        };
         /** Envelope[OpsFreshness] */
         Envelope_OpsFreshness_: {
             data: components["schemas"]["OpsFreshness"];
             provenance: components["schemas"]["Provenance"];
         };
+        /** Envelope[PnlReport] */
+        Envelope_PnlReport_: {
+            data: components["schemas"]["PnlReport"];
+            provenance: components["schemas"]["Provenance"];
+        };
         /** Envelope[PortfolioState] */
         Envelope_PortfolioState_: {
             data: components["schemas"]["PortfolioState"];
+            provenance: components["schemas"]["Provenance"];
+        };
+        /** Envelope[PreregPage] */
+        Envelope_PreregPage_: {
+            data: components["schemas"]["PreregPage"];
             provenance: components["schemas"]["Provenance"];
         };
         /** Envelope[RunOut] */
@@ -1024,6 +1207,18 @@ export interface components {
              */
             weight: number | null;
         };
+        /** ModelRaceReport */
+        ModelRaceReport: {
+            /** N */
+            n: number;
+            /**
+             * Rows
+             * @description Sorted by log_loss; includes 'ensemble' and 'market' rows.
+             */
+            rows: components["schemas"]["RaceRow"][];
+            /** Weights Over Time */
+            weights_over_time: components["schemas"]["WeightsPoint"][];
+        };
         /** MyQuotes */
         MyQuotes: {
             /**
@@ -1049,6 +1244,34 @@ export interface components {
         PauseResumeRequest: {
             /** Reason */
             reason?: string | null;
+        };
+        /** PnlPoint */
+        PnlPoint: {
+            /** Cum Pnl */
+            cum_pnl: number;
+            /** Drawdown */
+            drawdown: number;
+            /** Ts Utc */
+            ts_utc: string;
+        };
+        /** PnlReport */
+        PnlReport: {
+            /**
+             * Kelly Fraction
+             * @description Fraction of full Kelly actually staked (config).
+             */
+            kelly_fraction: number;
+            /** Max Drawdown */
+            max_drawdown: number;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "paper" | "live";
+            /** N Trades */
+            n_trades: number;
+            /** Points */
+            points: components["schemas"]["PnlPoint"][];
         };
         /** PortfolioState */
         PortfolioState: {
@@ -1081,6 +1304,28 @@ export interface components {
              * @description abs(exposure)/limit; >=1.0 means at/over limit.
              */
             utilization: number;
+        };
+        /** PreregGate */
+        PreregGate: {
+            /** Frozen At */
+            frozen_at: string | null;
+            /** Gate Id */
+            gate_id: string;
+            /** Metric */
+            metric: string | null;
+            /** Path */
+            path: string;
+            /** Status */
+            status: string;
+            /** Threshold */
+            threshold: string | null;
+            /** Title */
+            title: string;
+        };
+        /** PreregPage */
+        PreregPage: {
+            /** Gates */
+            gates: components["schemas"]["PreregGate"][];
         };
         /**
          * ProbWithBand
@@ -1164,6 +1409,25 @@ export interface components {
             variance: number;
             /** Widen Factor */
             widen_factor: number;
+        };
+        /** RaceRow */
+        RaceRow: {
+            brier: components["schemas"]["CIValue"];
+            /** Dm Significant */
+            dm_significant: boolean;
+            /**
+             * Dm Vs Market
+             * @description DM statistic on log-loss diffs vs the de-vigged market; negative = better than market.
+             */
+            dm_vs_market: number;
+            log_loss: components["schemas"]["CIValue"];
+            /** Model */
+            model: string;
+            /**
+             * Weight
+             * @description Current ensemble weight; null for market baseline.
+             */
+            weight: number | null;
         };
         /** ReconciliationRow */
         ReconciliationRow: {
@@ -1391,6 +1655,15 @@ export interface components {
             kalshi_enabled: boolean;
             /** Polymarket Enabled */
             polymarket_enabled: boolean;
+        };
+        /** WeightsPoint */
+        WeightsPoint: {
+            /** Ts Utc */
+            ts_utc: string;
+            /** Weights */
+            weights: {
+                [key: string]: number;
+            };
         };
         /** WidenRequest */
         WidenRequest: {
@@ -1674,6 +1947,97 @@ export interface operations {
             };
         };
     };
+    get_eval_calibration_api_v1_eval_calibration_get: {
+        parameters: {
+            query?: {
+                model?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_CalibrationReport_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_eval_clv_api_v1_eval_clv_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ClvReport_"];
+                };
+            };
+        };
+    };
+    get_eval_model_race_api_v1_eval_model_race_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ModelRaceReport_"];
+                };
+            };
+        };
+    };
+    get_eval_pnl_api_v1_eval_pnl_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_PnlReport_"];
+                };
+            };
+        };
+    };
     get_health_api_v1_health_get: {
         parameters: {
             query?: never;
@@ -1887,6 +2251,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_PortfolioState_"];
+                };
+            };
+        };
+    };
+    get_prereg_api_v1_prereg_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_PreregPage_"];
                 };
             };
         };

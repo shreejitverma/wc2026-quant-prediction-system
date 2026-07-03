@@ -7,6 +7,7 @@ import {
   Radar,
   Swords,
   TrendingUp,
+  Tv,
   Trophy,
   Wrench,
 } from "lucide-react";
@@ -24,6 +25,8 @@ export const NAV_ITEMS = [
   { name: "Performance", href: "/performance", icon: Gauge },
   { name: "Ledger", href: "/ledger", icon: BookLock },
   { name: "Ops", href: "/ops", icon: Wrench },
+  // 10th entry gets no digit hotkey (1-9 only); it is the away-from-desk view.
+  { name: "Matchday", href: "/matchday", icon: Tv },
 ] as const;
 
 export function Sidebar() {
@@ -48,9 +51,11 @@ export function Sidebar() {
               >
                 <item.icon className="h-4 w-4" />
                 {item.name}
-                <kbd aria-hidden="true" className="ml-auto font-mono text-[10px] text-muted-foreground/60">
-                  {i + 1}
-                </kbd>
+                {i < 9 && (
+                  <kbd aria-hidden="true" className="ml-auto font-mono text-[10px] text-muted-foreground/60">
+                    {i + 1}
+                  </kbd>
+                )}
               </Link>
             );
           })}

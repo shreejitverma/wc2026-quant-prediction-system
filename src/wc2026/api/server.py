@@ -43,6 +43,8 @@ from .commands import (
     read_command_state,
 )
 from .deps import ApiState, get_state
+from ..eval.metrics import bootstrap_ci, diebold_mariano, pointwise_brier, pointwise_log_loss
+from .mock_eval import MARKET_CLASSES, eval_table
 from .mock_tournament import (
     GROUPS,
     STAGE_CHAMPION,
@@ -61,7 +63,14 @@ from .schemas import (
     AlertsPage,
     Attribution,
     BookLevel,
+    CalibrationBin,
+    CalibrationReport,
+    CIValue,
     ClusterPosition,
+    ClvByClass,
+    ClvHistBin,
+    ClvPoint,
+    ClvReport,
     CoherenceReport,
     CommandResult,
     CommandStateOut,
@@ -85,13 +94,19 @@ from .schemas import (
     MatchPrediction,
     MatchTimeline,
     ModelProbs,
+    ModelRaceReport,
     MyQuotes,
     OpsFreshness,
+    PnlPoint,
+    PnlReport,
+    PreregGate,
+    PreregPage,
     PauseResumeRequest,
     PortfolioState,
     PositionCluster,
     ProbWithBand,
     QuoteInputs,
+    RaceRow,
     ReconciliationRow,
     RunOut,
     RunsPage,
@@ -105,6 +120,7 @@ from .schemas import (
     TournamentState,
     VenueInfo,
     VenueStatus,
+    WeightsPoint,
     WidenRequest,
     WinnerProb,
 )
@@ -1132,3 +1148,174 @@ def get_ops_freshness(state: StateDep) -> Envelope[OpsFreshness]:
     ]
     data = OpsFreshness(sources=sources, reconciliation=recon)
     return Envelope(data=data, provenance=make_provenance(state.cfg, source="mock"))
+
+
+# --- Evaluation (Phase 5): REAL statistics over the mock resolved table ----
+
+
+def _ci_value(losses, seed: int) -> CIValue:
+    import numpy as np
+
+    arr = np.asarray(losses, dtype=float)
+    lo, hi = bootstrap_ci(arr, seed=seed)
+    return CIValue(value=float(arr.mean()), ci_lo=lo, ci_hi=hi, n=int(len(arr)))
+
+
+@app.get("/api/v1/eval/clv", response_model=Envelope[ClvReport])
+def get_eval_clv(state: StateDep) -> Envelope[ClvReport]:
+    import numpy as np
+
+    t = eval_table(state.cfg.seed)
+    clv_pp = (t.close_p - t.entry_p) * 100  # prob points captured vs close
+
+    cumulative = [
+        ClvPoint(ts_utc=to_iso(datetime.fromtimestamp(ts, tz=UTC)), cum_pp=float(c))
+        for ts, c in zip(t.ts_epoch[::8], np.cumsum(clv_pp)[::8])
+    ]
+    edges = np.linspace(clv_pp.min(), clv_pp.max(), 21)
+    counts, _ = np.histogram(clv_pp, bins=edges)
+    histogram = [
+        ClvHistBin(lo_pp=float(edges[i]), hi_pp=float(edges[i + 1]), count=int(c))
+        for i, c in enumerate(counts)
+    ]
+    by_class = [
+        ClvByClass(market_class=mc, mean_pp=_ci_value(clv_pp[t.market_class == mc], seed=state.cfg.seed + i))
+        for i, mc in enumerate(MARKET_CLASSES)
+    ]
+    data = ClvReport(
+        mean_pp=_ci_value(clv_pp, seed=state.cfg.seed),
+        cumulative=cumulative,
+        histogram=histogram,
+        by_class=by_class,
+    )
+    return Envelope(data=data, provenance=make_provenance(state.cfg, source="mock"))
+
+
+@app.get("/api/v1/eval/calibration", response_model=Envelope[CalibrationReport])
+def get_eval_calibration(
+    state: StateDep,
+    model: str = Query(default="ensemble"),
+) -> Envelope[CalibrationReport]:
+    import numpy as np
+
+    t = eval_table(state.cfg.seed)
+    if model not in t.model_p:
+        raise HTTPException(status_code=404, detail={"code": "unknown_model", "model": model})
+    p = t.model_p[model]
+    bins = []
+    for lo in np.arange(0.0, 1.0, 0.1):
+        mask = (p >= lo) & (p < lo + 0.1)
+        n = int(mask.sum())
+        if n == 0:
+            bins.append(CalibrationBin(p_mid=float(lo + 0.05), n=0, empirical=0.0, ci_lo=0.0, ci_hi=1.0))
+            continue
+        hits = int(t.outcome[mask].sum())
+        ci_lo, ci_hi = wilson_ci(hits, n)
+        bins.append(
+            CalibrationBin(p_mid=float(lo + 0.05), n=n, empirical=hits / n, ci_lo=ci_lo, ci_hi=ci_hi)
+        )
+    data = CalibrationReport(model=model, n_total=t.n, bins=bins)
+    return Envelope(data=data, provenance=make_provenance(state.cfg, source="mock"))
+
+
+@app.get("/api/v1/eval/model-race", response_model=Envelope[ModelRaceReport])
+def get_eval_model_race(state: StateDep) -> Envelope[ModelRaceReport]:
+    t = eval_table(state.cfg.seed)
+    market_ll = pointwise_log_loss(t.outcome, t.market_p)
+
+    current_w = t.weights_over_time[-1]["weights"]
+    rows = []
+    for i, (name, p) in enumerate(sorted(t.model_p.items())):
+        ll = pointwise_log_loss(t.outcome, p)
+        br = pointwise_brier(t.outcome, p)
+        stat, sig = diebold_mariano(ll, market_ll)
+        rows.append(
+            RaceRow(
+                model=name,
+                log_loss=_ci_value(ll, seed=state.cfg.seed + 100 + i),
+                brier=_ci_value(br, seed=state.cfg.seed + 200 + i),
+                dm_vs_market=stat,
+                dm_significant=sig,
+                weight=current_w.get(name),
+            )
+        )
+    rows.append(
+        RaceRow(
+            model="market (de-vig)",
+            log_loss=_ci_value(market_ll, seed=state.cfg.seed + 300),
+            brier=_ci_value(pointwise_brier(t.outcome, t.market_p), seed=state.cfg.seed + 301),
+            dm_vs_market=0.0,
+            dm_significant=False,
+            weight=None,
+        )
+    )
+    rows.sort(key=lambda r: r.log_loss.value)
+    weights_over_time = [
+        WeightsPoint(ts_utc=to_iso(datetime.fromtimestamp(w["ts_epoch"], tz=UTC)), weights=w["weights"])
+        for w in t.weights_over_time
+    ]
+    data = ModelRaceReport(n=t.n, rows=rows, weights_over_time=weights_over_time)
+    return Envelope(data=data, provenance=make_provenance(state.cfg, source="mock"))
+
+
+@app.get("/api/v1/eval/pnl", response_model=Envelope[PnlReport])
+def get_eval_pnl(state: StateDep) -> Envelope[PnlReport]:
+    import numpy as np
+
+    t = eval_table(state.cfg.seed)
+    # Paper P&L: $1 notional per event on the outcome vs entry price.
+    pnl = (t.outcome - t.entry_p) * 1.0
+    cum = np.cumsum(pnl)
+    peak = np.maximum.accumulate(cum)
+    dd = cum - peak
+    points = [
+        PnlPoint(
+            ts_utc=to_iso(datetime.fromtimestamp(ts, tz=UTC)),
+            cum_pnl=float(c),
+            drawdown=float(d),
+        )
+        for ts, c, d in zip(t.ts_epoch[::4], cum[::4], dd[::4])
+    ]
+    data = PnlReport(
+        mode=state.cfg.mode,
+        n_trades=t.n,
+        points=points,
+        max_drawdown=float(dd.min()),
+        kelly_fraction=0.25,
+    )
+    return Envelope(data=data, provenance=make_provenance(state.cfg, source="mock"))
+
+
+# --- Pre-registration gates (REAL: parsed from docs/preregistrations) ------
+
+
+@app.get("/api/v1/prereg", response_model=Envelope[PreregPage])
+def get_prereg(state: StateDep) -> Envelope[PreregPage]:
+    """Real files, definitive empty state. The UI renders gates as first-class
+    objects so moving a goalpost is visible, not easy."""
+    import re
+
+    prereg_dir = state.root / "docs" / "preregistrations"
+    gates: list[PreregGate] = []
+    if prereg_dir.exists():
+        for f in sorted(prereg_dir.glob("*.md")):
+            if f.name.startswith("_") or f.name.lower() == "readme.md":
+                continue
+            text = f.read_text(encoding="utf-8")
+            title_m = re.search(r"^# Pre-registration:\s*(.+)$", text, re.M)
+            status_m = re.search(r"^- Status:\s*(\S+)", text, re.M)
+            frozen_m = re.search(r"^- Date frozen[^:]*:\s*(\S+)", text, re.M)
+            metric_m = re.search(r"## Metric\s*\n+([^\n#]+)", text)
+            thresh_m = re.search(r"- Threshold[^:]*:\s*(.+)$", text, re.M)
+            gates.append(
+                PreregGate(
+                    gate_id=f.stem,
+                    title=title_m.group(1).strip() if title_m else f.stem,
+                    status=status_m.group(1).strip() if status_m else "unknown",
+                    metric=metric_m.group(1).strip() if metric_m else None,
+                    threshold=thresh_m.group(1).strip() if thresh_m else None,
+                    frozen_at=frozen_m.group(1).strip() if frozen_m else None,
+                    path=str(f.relative_to(state.root)),
+                )
+            )
+    return Envelope(data=PreregPage(gates=gates), provenance=make_provenance(state.cfg, source="real"))
