@@ -4,6 +4,115 @@ The WC2026 quantitative system relies on a dynamically weighted ensemble of high
 
 ---
 
+## 0. First-Principles: How Predictions Are Constructed From Scratch
+
+To understand the system, one must understand how a single historical match result eventually translates into a real-time contract quote on Kalshi or Polymarket. Below is the step-by-step mathematical progression of our prediction pipeline.
+
+```
+[Raw Historical Match Data]
+           │
+           ▼
+[Step 1: Fit Team Ratings] ──► Attacker Strength (α) & Defender Weakness (β)
+           │
+           ▼
+[Step 2: Match Expectation] ──► Home Expected Goals (λ) & Away Expected Goals (μ)
+           │
+           ▼
+[Step 3: Joint Probability] ──► 15x15 Scoreline Matrix (ScoreDist)
+           │
+           ▼
+[Step 4: Tournament Sim] ──► 100,000-Path Monte Carlo Joint Standing Resolver
+           │
+           ▼
+[Step 5: Pricing & Edge] ──► Fair Value (FV) vs. Live Orderbook Bid/Ask → Trade
+```
+
+### Step 1: Quantifying Individual Team Strength (Attack & Defense)
+We assume that goal scoring is a stochastic process. To model it, we must first isolate the intrinsic abilities of each team. We assign two relative parameters to every team $i$ in our database:
+*   **Attack Strength ($\alpha_i$)**: A team's scoring capacity.
+*   **Defense Weakness ($\beta_i$)**: A team's propensity to concede goals.
+
+These parameters are normalized around a global average of $1.0$.
+*   If Germany has an attack rating of $\alpha_{GER} = 1.30$, they are expected to score $30\%$ more goals than a globally average team against an average defense.
+*   If Italy has a defensive rating of $\beta_{ITA} = 0.85$, they are expected to concede $15\%$ fewer goals than a globally average defense against an average attack.
+
+These parameters are estimated by fitting historical matches (results database) using Maximum Likelihood Estimation (MLE) or Bayesian MCMC sampling.
+
+### Step 2: Colliding Strengths to Calculate Goal Expectations ($\lambda$ and $\mu$)
+When Team $i$ plays Team $j$, their individual parameters collide to yield the match-specific Expected Goals (rates):
+*   **$\lambda$ (Expected Goals for Team $i$)**:
+    $$
+    \lambda = \alpha_i \times \beta_j \times \gamma
+    $$
+*   **$\mu$ (Expected Goals for Team $j$)**:
+    $$
+    \mu = \alpha_j \times \beta_i
+    $$
+
+Where:
+*   $\gamma$ represents the **Home Advantage multiplier** (e.g. $1.20$, which scales up the home team's rate by $20\%$).
+*   If the match is played on a **neutral field** (like most fixtures in the World Cup tournament), $\gamma$ is set to $1.0$ (neutralized).
+
+### Step 3: Generating the Joint Scoreline Probability Matrix (`ScoreDist`)
+Football goals are discrete, non-negative, and rare events. We model the probability of Team $i$ scoring exactly $x$ goals using the Poisson Probability Mass Function (PMF):
+
+$$
+P(X=x; \lambda) = \frac{\lambda^x e^{-\lambda}}{x!}
+$$
+
+Assuming goal scoring is independent, the joint probability of Team $i$ scoring $x$ goals and Team $j$ scoring $y$ goals is the product of their individual probabilities:
+
+$$
+P(X=x, Y=y) = \left( \frac{\lambda^x e^{-\lambda}}{x!} \right) \times \left( \frac{\mu^y e^{-\mu}}{y!} \right)
+$$
+
+Because home and away goals are not perfectly independent in real matches, we apply a low-score dependency adjustment $\tau_{\lambda,\mu}(x,y)$ using a correlation parameter $\rho$:
+
+$$
+P_{adjusted}(X=x, Y=y) = P(X=x, Y=y) \times \tau_{\lambda,\mu}(x,y)
+$$
+
+This calculation is computed for all scoreline combinations up to a maximum goal limit (typically $14$), generating a **15x15 probability grid** (`ScoreDist`). By summing specific regions of this grid, we derive the exact moneyline probabilities:
+*   **Home Win Probability**: Sum of cells where $x > y$ (lower triangle).
+*   **Draw Probability**: Sum of cells where $x = y$ (diagonal).
+*   **Away Win Probability**: Sum of cells where $x < y$ (upper triangle).
+
+### Step 4: Resolving the Tournament's Joint Distribution (Monte Carlo Simulator)
+Individual match probabilities are not enough to price tournament contracts (e.g. "Argentina wins the World Cup") because the tournament bracket is a complex, conditionally dependent topology. If Brazil loses a group match, they change their group standing, shifting their knockout path and altering the survival probabilities of every other team in the bracket.
+
+To capture these joint correlations, we run a **100,000-path Monte Carlo Simulation**:
+1.  **Sample Scorelines**: For every group stage match, we draw a random float $U \sim \text{Uniform}(0, 1)$ and map it to the cumulative sum of that match's 15x15 `ScoreDist` matrix, yielding a single simulated scoreline (e.g. 2-1).
+2.  **Resolve Group Standings**: We compile points ($3$ for win, $1$ for draw). If teams are tied, we execute the strict FIFA ruleset:
+    *   Goal difference in all group matches.
+    *   Goals scored in all group matches.
+    *   Head-to-head records.
+3.  **Cross-Group Matching (3rd-Place Rules)**: The best four 3rd-place teams across the 12 groups advance. We map their permutations using pre-defined index grids to assign knockout matchups.
+4.  **Simulate Knockouts**: For each knockout round, we sample the match score. If it is a draw, we resolve the advancer via penalty shootout simulation.
+5.  **Accumulate Output**: Over 100k independent runs, we count the frequency of outcomes. If England wins the final in $12,400$ paths, their true conditional probability of winning the tournament is $12.4\%$.
+
+### Step 5: Deriving Fair Value and Quoting Edge
+A binary contract on Kalshi or Polymarket pays out $\$1.00$ if the event occurs, and $\$0.00$ if it does not.
+Under risk-neutral pricing, the **Fair Value (FV)** of the contract in dollars is equal to the probability derived from our Monte Carlo simulation:
+
+$$
+Price_{fair} = P(Event) \times \$1.00
+$$
+
+If the simulator determines that the USA has a $35\%$ probability of reaching the Quarterfinals, our Fair Value is $\$0.35$.
+We read the live market orderbook. If the current Ask price (to buy the contract) is $\$0.30$, we calculate our expected edge:
+
+$$
+Edge = Price_{fair} - Price_{ask} - Fee_{exchange}
+$$
+
+$$
+Edge = \$0.35 - \$0.30 - \$0.00 = +0.05 \quad (\text{or } +5\phi \text{ of edge})
+$$
+
+If the calculated edge exceeds our risk thresholds, the quoting engine instantly submits buy orders to capture the mispricing.
+
+---
+
 ## 1. M1: Dixon-Coles Bivariate Poisson (`dixon_coles.py`)
 
 A classic Poisson model inherently assumes that the goals scored by the Home team ($X$) and Away team ($Y$) are entirely independent. The Dixon-Coles model introduces a dependence parameter $\rho$ to correct the empirical under-pricing of low-scoring draws (0-0, 1-1) and narrow wins (1-0, 0-1) found in pure Poisson models.
