@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useRef, useSyncExternalStore } from "react";
 import { terminalSocket, type WsMessage, type WsStatus } from "./ws";
 

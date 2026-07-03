@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * ⌘K jump-to-anything. Navigation is the enemy during a live window; the
  * palette is the primary way to move (rail clicks are the fallback). Matches
@@ -8,7 +6,7 @@
  * as any screen.
  */
 
-import { useRouter } from "next/navigation";
+import { useNavigate } from "react-router";
 import { Command } from "cmdk";
 import { useQuery } from "@tanstack/react-query";
 import { fetchMatches } from "@/lib/api";
@@ -16,7 +14,7 @@ import { useUiStore } from "@/store/uiStore";
 import { NAV_ITEMS } from "./Sidebar";
 
 export function CommandPalette() {
-  const router = useRouter();
+  const navigate = useNavigate();
   const { paletteOpen, setPaletteOpen, setKillDialogOpen } = useUiStore();
 
   const matches = useQuery({
@@ -28,7 +26,7 @@ export function CommandPalette() {
 
   const go = (href: string) => {
     setPaletteOpen(false);
-    router.push(href);
+    navigate(href);
   };
 
   return (

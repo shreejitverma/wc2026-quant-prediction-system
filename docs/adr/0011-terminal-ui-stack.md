@@ -1,6 +1,6 @@
-# ADR-0011: Terminal UI stack — FastAPI + Next.js/TypeScript client of the harness
+# ADR-0011: Terminal UI stack — FastAPI + React/TypeScript client of the harness
 
-- Status: accepted
+- Status: accepted (amended by ADR-0015: build layer migrated Next.js → Vite at the operator's direction; all other decisions here stand)
 - Date: 2026-07-02
 
 ## Context

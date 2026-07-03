@@ -1,7 +1,4 @@
-"use client";
-
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { Link, useLocation } from "react-router";
 import {
   Activity,
   BookLock,
@@ -30,7 +27,7 @@ export const NAV_ITEMS = [
 ] as const;
 
 export function Sidebar() {
-  const pathname = usePathname();
+  const { pathname } = useLocation();
   return (
     <div className="flex h-full w-56 flex-col border-r bg-background">
       <div className="flex h-14 items-center border-b px-4">
@@ -43,7 +40,7 @@ export function Sidebar() {
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                to={item.href}
                 aria-current={active ? "page" : undefined}
                 className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground ${
                   active ? "bg-accent text-accent-foreground" : "text-muted-foreground"

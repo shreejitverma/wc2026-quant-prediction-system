@@ -1,5 +1,3 @@
-"use client"
-import React from 'react'
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 interface ProbabilityRibbonChartProps {

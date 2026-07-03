@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Ledger browser (REAL data): the shell's proof screen. Decision it supports:
  * "can I trust that nothing in my history was rewritten, and which run/config

@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * OddsTicker: a price that shows its own last move. Tick direction uses
  * neutral ink glyphs, NOT the edge hues - "price went up" is not "good for

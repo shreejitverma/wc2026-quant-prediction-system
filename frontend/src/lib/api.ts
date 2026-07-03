@@ -26,7 +26,7 @@ export interface Envelope<T> {
 }
 
 const client = createClient<paths>({
-  baseUrl: process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000",
+  baseUrl: import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000",
 });
 
 function unwrap<T>(res: { data?: T; error?: unknown }, what: string): T {

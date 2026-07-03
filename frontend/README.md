@@ -1,36 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# WC2026 Operator Console (Frontend)
 
-## Getting Started
+The Operator Console is a strictly utilitarian, desktop-first Next.js React application designed for quantitative researchers executing trades on the prediction markets for the FIFA World Cup 2026. 
 
-First, run the development server:
+## Architectural Philosophy
+The goal is not a consumer-grade generic dashboard. The goal is the best possible operator console for a solo quant running a live market-making system. 
+- **Information Density**: High density of quantitative metrics (Expected Value, Alpha, Greeks).
+- **No Placeholders**: Never confuse a loaded number with a validated number.
+- **Explainability**: Every model's weighted contribution to an aggregated probability must be immediately accessible.
+
+---
+
+## 🛠️ Tech Stack & Tooling
+
+- **Framework**: `Next.js` (App Router configuration)
+- **Data Fetching**: `TanStack Query (React Query)`. Used for robust background polling, caching, and synchronization with the FastAPI backend without overwhelming the browser thread.
+- **State Management**: `Zustand`. Used for global state holding the Paper Trading Blotter (`tradingStore.ts`) and tracking risk limits like `maxPositionSize`.
+- **Real-time Streaming**: Native `WebSockets`. Hooked up directly via React `useEffect` to stream live orderbook updates (Bids/Asks) rapidly directly into DOM components like the `MarketDepthPanel`.
+- **Styling**: `Tailwind CSS` heavily optimized for dark mode tabular displays.
+
+---
+
+## 🚀 Running the Console
+
+Ensure you are in the `/frontend` directory, then:
 
 ```bash
+# Install Node dependencies
+npm install
+
+# Run the development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+> **Note**: For the console to receive data, the Python FastAPI backend must be running concurrently. You can launch both natively from the root project directory via `./run.sh`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 📁 Key Components Directory
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `src/app/page.tsx`: The main `CommandCenter` containing the top-level aggregates.
+- `src/app/matches/page.tsx`: The quantitative match preview showing team form, historical Elo bounds, and scoreline heatmaps derived from the joint distributions.
+- `src/app/markets/page.tsx`: The execution blotter. Shows the expected Fair Value vs the actual Bid/Ask on Polymarket and Kalshi.
+- `src/lib/api.ts`: Centralized fetcher logic wiring `TanStack Query` to the `http://localhost:8000/api` endpoints.
+- `src/store/tradingStore.ts`: The Zustand implementation holding the active array of trades and risk drawdown limits.
+- `src/components/MarketDepthPanel.tsx`: High-frequency WebSocket consumer for visualizing real-time trading depth.

@@ -20,7 +20,7 @@ export type WsStatus = "connecting" | "open" | "down";
 type Handler = (msg: WsMessage) => void;
 
 const WS_URL =
-  (process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000").replace(/^http/, "ws") +
+  (import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000").replace(/^http/, "ws") +
   "/api/v1/ws";
 
 class TerminalSocket {
@@ -52,6 +52,12 @@ class TerminalSocket {
   }
 
   private connect() {
+    // Guard the single-reconnect-path invariant: any pending retry is
+    // superseded by this attempt, so two connect paths can never race.
+    if (this.reconnectTimer !== null) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
     this.setStatus("connecting");
     const ws = new WebSocket(WS_URL);
     this.ws = ws;

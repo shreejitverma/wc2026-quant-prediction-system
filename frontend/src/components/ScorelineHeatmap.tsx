@@ -1,4 +1,3 @@
-import React from 'react';
 
 interface ScorelineHeatmapProps {
   matrix: number[][]; // 15x15

@@ -1,5 +1,3 @@
-"use client";
-
 import { Bell, Search } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";

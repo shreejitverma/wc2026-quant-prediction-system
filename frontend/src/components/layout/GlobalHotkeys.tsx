@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Terminal-wide keyboard entry points. ⌘K opens the palette; ⇧⌘K opens the
  * kill-switch confirmation from ANY screen - one keystroke, per the operating

@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * FreshnessDot: staleness as a property of the data, not a corner widget.
  * Fresh data earns NO color (a hollow neutral dot - fresh is the baseline,

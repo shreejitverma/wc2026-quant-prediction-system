@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * ConfirmTyped: the gate in front of anything live-affecting. The confirm
  * button stays disabled until the exact phrase is typed; if the action itself
@@ -8,7 +6,7 @@
  * without pretending a fence exists where it does not.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 export interface ConfirmTypedProps {
   open: boolean;
@@ -21,8 +19,15 @@ export interface ConfirmTypedProps {
   disabledReason?: string;
 }
 
-export function ConfirmTyped({
-  open,
+/** Renders nothing while closed; the dialog body only mounts while open, so
+ * the typed phrase resets by remount (never by a setState-in-effect, which
+ * risks a stale phrase surviving into the next arm/confirm cycle). */
+export function ConfirmTyped(props: ConfirmTypedProps) {
+  if (!props.open) return null;
+  return <ConfirmTypedDialog {...props} />;
+}
+
+function ConfirmTypedDialog({
   onOpenChange,
   title,
   description,
@@ -32,25 +37,14 @@ export function ConfirmTyped({
   disabledReason,
 }: ConfirmTypedProps) {
   const [typed, setTyped] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (open) {
-      setTyped("");
-      inputRef.current?.focus();
-    }
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onOpenChange(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onOpenChange]);
-
-  if (!open) return null;
+  }, [onOpenChange]);
 
   const armed = typed === phrase && !disabledReason && onConfirm !== undefined;
 
@@ -77,7 +71,7 @@ export function ConfirmTyped({
           Type <span className="font-mono font-bold text-foreground">{phrase}</span> to confirm
         </label>
         <input
-          ref={inputRef}
+          autoFocus
           value={typed}
           onChange={(e) => setTyped(e.target.value)}
           className="mt-1 w-full rounded-md border border-input bg-transparent px-3 py-2 font-mono text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
