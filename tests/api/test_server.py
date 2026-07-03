@@ -174,3 +174,67 @@ def test_mock_is_deterministic(client: TestClient) -> None:
     a = client.get("/api/v1/matches").json()["data"]
     b = client.get("/api/v1/matches").json()["data"]
     assert [m["expected_goals_home"] for m in a] == [m["expected_goals_home"] for m in b]
+
+
+# --- Phase 2/3: match detail, timeline, opportunity board, coherence --------
+
+
+def test_match_detail_is_coherent_with_list(client: TestClient) -> None:
+    listed = _envelope(client.get("/api/v1/matches").json())["data"][0]
+    body = _envelope(client.get(f"/api/v1/matches/{listed['match_id']}").json())
+    assert body["provenance"]["source"] == "mock"
+    d = body["data"]
+    # List and detail must agree: same generator by construction.
+    assert abs(d["prob_home_win"]["p"] - listed["prob_home_win"]) < 1e-12
+    # Every headline probability is derived from the served matrix.
+    m = d["scoreline_matrix"]
+    n = len(m)
+    p_home = sum(m[h][a] for h in range(n) for a in range(n) if h > a)
+    assert abs(p_home - d["prob_home_win"]["p"]) < 1e-12
+    # Bands are ordered; weights sum to 1; why[] accounts for the whole gap.
+    assert d["prob_home_win"]["lo"] <= d["prob_home_win"]["p"] <= d["prob_home_win"]["hi"]
+    assert abs(sum(x["weight"] for x in d["models"]) - 1.0) < 1e-9
+    gap_pp = abs(d["ensemble"]["p_home"] - d["market"]["p_home"]) * 100
+    assert abs(sum(x["delta_pp"] for x in d["why"]) - gap_pp) < 0.02
+
+
+def test_match_detail_404(client: TestClient) -> None:
+    assert client.get("/api/v1/matches/NOPE").status_code == 404
+    assert client.get("/api/v1/matches/MOCK_M99/timeline").status_code == 404
+
+
+def test_timeline_band_ordering(client: TestClient) -> None:
+    body = _envelope(client.get("/api/v1/matches/MOCK_M0/timeline").json())
+    pts = body["data"]["points"]
+    assert len(pts) == 49
+    assert all(p["lo"] <= p["fair"] <= p["hi"] for p in pts)
+    assert body["data"]["events"], "timeline without event markers is unexplainable"
+
+
+def test_opportunities_waterfall_and_quarantine_invariants(client: TestClient) -> None:
+    body = _envelope(client.get("/api/v1/opportunities").json())
+    rows = body["data"]
+    assert rows
+    ranked = [abs(r["edge_risk_adjusted"]) for r in rows]
+    assert ranked == sorted(ranked, reverse=True), "board must arrive ranked"
+    for r in rows:
+        # The waterfall accounts for the whole fair value, exactly.
+        assert abs(r["decomposition"][-1]["value_after"] - r["fair"]["p"]) < 1e-9
+        walk = 0.0
+        for step in r["decomposition"]:
+            walk += step["delta"]
+            assert abs(walk - step["value_after"]) < 1e-9
+        # Unconfirmed settlement mapping <=> quarantined row.
+        assert (not r["settlement"]["confirmed"]) == (r["actionability"] == "Unsafe")
+        assert r["fair"]["lo"] <= r["fair"]["p"] <= r["fair"]["hi"]
+
+
+def test_coherence_report_shapes(client: TestClient) -> None:
+    body = _envelope(client.get("/api/v1/coherence").json())
+    data = body["data"]
+    assert body["provenance"]["source"] == "mock"
+    assert data["cross_venue"], "cross-venue table must not be silently empty"
+    spreads = [c["max_spread_pp"] for c in data["cross_venue"]]
+    assert spreads == sorted(spreads, reverse=True)
+    for v in data["internal"]:
+        assert abs((v["direct_price"] - v["product_price"]) * 100 - v["gap_pp"]) < 0.01

@@ -37,6 +37,101 @@
         "title": "Attribution",
         "type": "object"
       },
+      "CoherenceReport": {
+        "properties": {
+          "cross_venue": {
+            "items": {
+              "$ref": "#/components/schemas/CrossVenueRow"
+            },
+            "title": "Cross Venue",
+            "type": "array"
+          },
+          "internal": {
+            "items": {
+              "$ref": "#/components/schemas/InternalViolation"
+            },
+            "title": "Internal",
+            "type": "array"
+          }
+        },
+        "required": [
+          "cross_venue",
+          "internal"
+        ],
+        "title": "CoherenceReport",
+        "type": "object"
+      },
+      "CrossVenueRow": {
+        "properties": {
+          "devig_ref": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "De-vigged sharp-book reference, if available.",
+            "title": "Devig Ref"
+          },
+          "event": {
+            "title": "Event",
+            "type": "string"
+          },
+          "kalshi": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kalshi"
+          },
+          "max_spread_pp": {
+            "title": "Max Spread Pp",
+            "type": "number"
+          },
+          "polymarket": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Polymarket"
+          }
+        },
+        "required": [
+          "event",
+          "kalshi",
+          "polymarket",
+          "devig_ref",
+          "max_spread_pp"
+        ],
+        "title": "CrossVenueRow",
+        "type": "object"
+      },
+      "Envelope_CoherenceReport_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CoherenceReport"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          }
+        },
+        "required": [
+          "data",
+          "provenance"
+        ],
+        "title": "Envelope[CoherenceReport]",
+        "type": "object"
+      },
       "Envelope_HealthData_": {
         "properties": {
           "data": {
@@ -189,6 +284,37 @@
         "title": "Envelope[list[MatchPrediction]]",
         "type": "object"
       },
+      "FairValueStep": {
+        "description": "One step of the fair-value waterfall. Steps are ordered; value_after of\nthe last step IS the fair value - the decomposition must account for the\nwhole number or it is not a decomposition.",
+        "properties": {
+          "delta": {
+            "description": "Signed contribution; the first step's delta is the model prob itself.",
+            "title": "Delta",
+            "type": "number"
+          },
+          "label": {
+            "enum": [
+              "model_probability",
+              "fees",
+              "timing_lockup",
+              "resolution_risk"
+            ],
+            "title": "Label",
+            "type": "string"
+          },
+          "value_after": {
+            "title": "Value After",
+            "type": "number"
+          }
+        },
+        "required": [
+          "label",
+          "delta",
+          "value_after"
+        ],
+        "title": "FairValueStep",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -276,6 +402,46 @@
           "venues"
         ],
         "title": "HealthData",
+        "type": "object"
+      },
+      "InternalViolation": {
+        "description": "Bracket-path product vs direct price, from the persisted joint draws.",
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "direct_price": {
+            "title": "Direct Price",
+            "type": "number"
+          },
+          "gap_pp": {
+            "title": "Gap Pp",
+            "type": "number"
+          },
+          "product_price": {
+            "title": "Product Price",
+            "type": "number"
+          },
+          "safest_class": {
+            "enum": [
+              "my-info",
+              "their-info",
+              "settlement-trap",
+              "incoherence"
+            ],
+            "title": "Safest Class",
+            "type": "string"
+          }
+        },
+        "required": [
+          "description",
+          "product_price",
+          "direct_price",
+          "gap_pp",
+          "safest_class"
+        ],
+        "title": "InternalViolation",
         "type": "object"
       },
       "LedgerEntry": {
@@ -468,17 +634,63 @@
             "title": "Best Bid",
             "type": "number"
           },
+          "classification": {
+            "enum": [
+              "my-info",
+              "their-info",
+              "settlement-trap",
+              "incoherence"
+            ],
+            "title": "Classification",
+            "type": "string"
+          },
+          "contract_label": {
+            "title": "Contract Label",
+            "type": "string"
+          },
+          "decomposition": {
+            "description": "Fair-value waterfall; the last step's value_after equals fair.p.",
+            "items": {
+              "$ref": "#/components/schemas/FairValueStep"
+            },
+            "title": "Decomposition",
+            "type": "array"
+          },
+          "depth_ask": {
+            "title": "Depth Ask",
+            "type": "integer"
+          },
+          "depth_bid": {
+            "description": "Size available at best bid (contracts).",
+            "title": "Depth Bid",
+            "type": "integer"
+          },
           "edge_after_fees": {
             "title": "Edge After Fees",
             "type": "number"
+          },
+          "edge_risk_adjusted": {
+            "description": "After-fee edge scaled by (1 - uncertainty); the board's ranking key.",
+            "title": "Edge Risk Adjusted",
+            "type": "number"
+          },
+          "fair": {
+            "$ref": "#/components/schemas/ProbWithBand"
           },
           "fair_value": {
             "title": "Fair Value",
             "type": "number"
           },
+          "settlement": {
+            "$ref": "#/components/schemas/SettlementMapping"
+          },
           "ticker": {
             "title": "Ticker",
             "type": "string"
+          },
+          "uncertainty_score": {
+            "title": "Uncertainty Score",
+            "type": "number"
           },
           "venue": {
             "enum": [
@@ -492,11 +704,20 @@
         "required": [
           "venue",
           "ticker",
+          "contract_label",
           "fair_value",
+          "fair",
           "best_bid",
           "best_ask",
+          "depth_bid",
+          "depth_ask",
           "edge_after_fees",
-          "actionability"
+          "edge_risk_adjusted",
+          "uncertainty_score",
+          "classification",
+          "actionability",
+          "decomposition",
+          "settlement"
         ],
         "title": "MarketOpportunity",
         "type": "object"
@@ -1005,6 +1226,52 @@
         "title": "RunsPage",
         "type": "object"
       },
+      "SettlementMapping": {
+        "description": "The market's settlement text mapped to the model event it prices.\n`confirmed=False` quarantines the contract: settlement-definition traps are\nan edge CLASS, and an unreviewed mapping must be unactionable.",
+        "properties": {
+          "confirmed": {
+            "title": "Confirmed",
+            "type": "boolean"
+          },
+          "confirmed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed At"
+          },
+          "market_text": {
+            "title": "Market Text",
+            "type": "string"
+          },
+          "model_event": {
+            "title": "Model Event",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "required": [
+          "market_text",
+          "model_event",
+          "confirmed"
+        ],
+        "title": "SettlementMapping",
+        "type": "object"
+      },
       "TimelineEvent": {
         "properties": {
           "kind": {
@@ -1179,6 +1446,25 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/coherence": {
+      "get": {
+        "description": "Cross-venue rows come from the SAME opportunity rows the board serves;\ninternal rows mock the bracket-path-product vs direct-price check the\nsimulator's joint draws will answer for real (ADR-0006's coherence edge).",
+        "operationId": "get_coherence_api_v1_coherence_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_CoherenceReport_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Coherence"
+      }
+    },
     "/api/v1/health": {
       "get": {
         "operationId": "get_health_api_v1_health_get",

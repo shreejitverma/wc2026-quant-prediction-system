@@ -34,8 +34,12 @@ from .deps import ApiState, get_state
 from .provenance import make_provenance
 from .schemas import (
     Attribution,
+    CoherenceReport,
+    CrossVenueRow,
     Envelope,
+    FairValueStep,
     HealthData,
+    InternalViolation,
     LedgerEntry,
     LedgerPage,
     LedgerVerification,
@@ -49,6 +53,7 @@ from .schemas import (
     ProbWithBand,
     RunOut,
     RunsPage,
+    SettlementMapping,
     TimelineEvent,
     TimelinePoint,
     VenueInfo,
@@ -479,27 +484,159 @@ def get_match_timeline(match_id: str, state: StateDep) -> Envelope[MatchTimeline
     return Envelope(data=timeline, provenance=make_provenance(state.cfg, source="mock"))
 
 
+_SETTLEMENT_TEXTS = {
+    "home_win": (
+        "{home} to be declared the winner of the match vs {away} at full time. "
+        "Extra time and penalties DO NOT count; a knockout win on penalties settles NO."
+    ),
+    "over_2_5": (
+        "Total goals scored by both teams to exceed 2.5 at full time. "
+        "Own goals count; extra-time goals DO NOT count."
+    ),
+}
+
+
+def _mock_opportunity_rows(state: ApiState) -> list[MarketOpportunity]:
+    """Every board row derives from the SAME match cores the prediction screens
+    serve: a fair value here can never contradict Match Detail. The waterfall
+    is exact by construction (last value_after == fair.p) and the settlement
+    invariant holds: unconfirmed mapping <=> actionability 'Unsafe'."""
+    min_edge = state.cfg.risk.min_edge
+    rows: list[MarketOpportunity] = []
+    for i in range(len(_MOCK_FIXTURES)):
+        core = _mock_match_core(state, i)
+        fx, ens, unc, half = core["fixture"], core["ens"], core["uncertainty"], core["band_half"]
+        for contract, model_p in (("home_win", ens["home"]), ("over_2_5", ens["over_2_5"])):
+            label = f"{fx['home']} win" if contract == "home_win" else "Over 2.5 goals"
+            event = (
+                f"{fx['home'].upper()}_BEATS_{fx['away'].upper()}_FT"
+                if contract == "home_win"
+                else f"{fx['home'].upper()}_{fx['away'].upper()}_TOTAL_GT_2_5_FT"
+            )
+            for venue in ("kalshi", "polymarket"):
+                rng = random.Random(hash((state.cfg.seed, i, contract, venue)) & 0xFFFFFFFF)
+                fees = -round(rng.uniform(0.008, 0.018), 4)
+                timing = -round(rng.uniform(0.001, 0.006), 4)
+                resolution = -round(rng.uniform(0.002, 0.010), 4)
+                fair_p = model_p + fees + timing + resolution
+                steps = [
+                    FairValueStep(label="model_probability", delta=model_p, value_after=model_p),
+                    FairValueStep(label="fees", delta=fees, value_after=model_p + fees),
+                    FairValueStep(label="timing_lockup", delta=timing, value_after=model_p + fees + timing),
+                    FairValueStep(label="resolution_risk", delta=resolution, value_after=fair_p),
+                ]
+                mid = min(0.97, max(0.03, fair_p - rng.uniform(-0.06, 0.06)))
+                spread = rng.uniform(0.015, 0.04)
+                edge = round(fair_p - mid, 4)
+                risk_adj = round(edge * (1 - unc), 4)
+                classification = rng.choice(["my-info", "their-info", "settlement-trap", "incoherence"])
+                confirmed = classification != "settlement-trap" and rng.random() > 0.15
+                stale = rng.random() < 0.08
+                if not confirmed:
+                    actionability = "Unsafe"
+                elif stale:
+                    actionability = "Stale"
+                elif abs(risk_adj) >= min_edge:
+                    actionability = "Tradeable"
+                elif abs(risk_adj) > 0.005:
+                    actionability = "Watch"
+                else:
+                    actionability = "No Edge"
+                rows.append(
+                    MarketOpportunity(
+                        venue=venue,
+                        ticker=f"{'KX' if venue == 'kalshi' else 'PM'}-WC26-{fx['home'][:3].upper()}{fx['away'][:3].upper()}-{'WIN' if contract == 'home_win' else 'O25'}",
+                        contract_label=f"{fx['home']} vs {fx['away']}: {label}",
+                        # Full precision: rounding is presentation and belongs
+                        # to the UI; rounding here breaks the waterfall's
+                        # exact sum-to-fair invariant.
+                        fair_value=fair_p,
+                        fair=ProbWithBand(
+                            p=fair_p,
+                            lo=max(0.0, fair_p - half),
+                            hi=min(1.0, fair_p + half),
+                        ),
+                        best_bid=round(mid - spread / 2, 3),
+                        best_ask=round(mid + spread / 2, 3),
+                        depth_bid=rng.randrange(50, 2500, 10),
+                        depth_ask=rng.randrange(50, 2500, 10),
+                        edge_after_fees=edge,
+                        edge_risk_adjusted=risk_adj,
+                        uncertainty_score=round(unc, 3),
+                        classification=classification,
+                        actionability=actionability,
+                        decomposition=steps,
+                        settlement=SettlementMapping(
+                            market_text=_SETTLEMENT_TEXTS[contract].format(home=fx["home"], away=fx["away"]),
+                            model_event=event,
+                            confirmed=confirmed,
+                            confirmed_at=to_iso(utc_now()) if confirmed else None,
+                            note=None if confirmed else "Mapping not human-reviewed: full-time vs extra-time definition unchecked.",
+                        ),
+                    )
+                )
+    rows.sort(key=lambda o: abs(o.edge_risk_adjusted), reverse=True)
+    return rows
+
+
 @app.get("/api/v1/opportunities", response_model=Envelope[list[MarketOpportunity]])
 def get_opportunities(state: StateDep) -> Envelope[list[MarketOpportunity]]:
-    rng = random.Random(state.cfg.seed + 1)
-    min_edge = state.cfg.risk.min_edge  # mock honors the real stay-flat fence
-    opportunities = []
-    for i in range(10):
-        fv = round(rng.uniform(0.1, 0.9), 3)
-        edge = round(rng.uniform(-0.05, 0.1), 3)
-        opportunities.append(
-            MarketOpportunity(
-                venue=rng.choice(["kalshi", "polymarket"]),
-                ticker=f"MOCK-WC2026-M{i}-WIN",
-                fair_value=fv,
-                best_bid=round(fv - 0.02, 3),
-                best_ask=round(fv + 0.02, 3),
-                edge_after_fees=edge,
-                actionability="Tradeable" if edge > min_edge else ("Watch" if edge > 0 else "No Edge"),
+    rows = _mock_opportunity_rows(state)
+    return Envelope(data=rows, provenance=make_provenance(state.cfg, source="mock"))
+
+
+@app.get("/api/v1/coherence", response_model=Envelope[CoherenceReport])
+def get_coherence(state: StateDep) -> Envelope[CoherenceReport]:
+    """Cross-venue rows come from the SAME opportunity rows the board serves;
+    internal rows mock the bracket-path-product vs direct-price check the
+    simulator's joint draws will answer for real (ADR-0006's coherence edge)."""
+    rows = _mock_opportunity_rows(state)
+    by_event: dict[str, dict[str, MarketOpportunity]] = {}
+    for r in rows:
+        by_event.setdefault(r.contract_label, {})[r.venue] = r
+
+    cross: list[CrossVenueRow] = []
+    for event, venues in by_event.items():
+        kx = venues.get("kalshi")
+        pm = venues.get("polymarket")
+        mid = lambda o: round((o.best_bid + o.best_ask) / 2, 4)  # noqa: E731
+        ref = kx.fair.p if kx else (pm.fair.p if pm else None)
+        prices = [p for p in (mid(kx) if kx else None, mid(pm) if pm else None, ref) if p is not None]
+        spread_pp = round((max(prices) - min(prices)) * 100, 2) if len(prices) > 1 else 0.0
+        cross.append(
+            CrossVenueRow(
+                event=event,
+                kalshi=mid(kx) if kx else None,
+                polymarket=mid(pm) if pm else None,
+                devig_ref=ref,
+                max_spread_pp=spread_pp,
             )
         )
-    opportunities.sort(key=lambda o: o.edge_after_fees, reverse=True)
-    return Envelope(data=opportunities, provenance=make_provenance(state.cfg, source="mock"))
+    cross.sort(key=lambda c: c.max_spread_pp, reverse=True)
+
+    rng = random.Random(state.cfg.seed + 42)
+    internal: list[InternalViolation] = []
+    for i in range(min(2, len(_MOCK_FIXTURES))):
+        core = _mock_match_core(state, i)
+        fx = core["fixture"]
+        p_group = round(core["ens"]["home"] * rng.uniform(0.55, 0.75), 4)
+        p_champ_given = round(rng.uniform(0.15, 0.35), 4)
+        product = round(p_group * p_champ_given, 4)
+        direct = round(product + rng.uniform(-0.02, 0.02), 4)
+        internal.append(
+            InternalViolation(
+                description=(
+                    f"P({fx['home']} wins Group {fx['group']}) x P(champion | wins group) "
+                    f"= {p_group} x {p_champ_given} vs direct champion price"
+                ),
+                product_price=product,
+                direct_price=direct,
+                gap_pp=round((direct - product) * 100, 2),
+                safest_class="incoherence",
+            )
+        )
+    report = CoherenceReport(cross_venue=cross, internal=internal)
+    return Envelope(data=report, provenance=make_provenance(state.cfg, source="mock"))
 
 
 @app.websocket("/api/v1/ws")

@@ -4,6 +4,28 @@
  */
 
 export interface paths {
+    "/api/v1/coherence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Coherence
+         * @description Cross-venue rows come from the SAME opportunity rows the board serves;
+         *     internal rows mock the bracket-path-product vs direct-price check the
+         *     simulator's joint draws will answer for real (ADR-0006's coherence edge).
+         */
+        get: operations["get_coherence_api_v1_coherence_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health": {
         parameters: {
             query?: never;
@@ -179,6 +201,34 @@ export interface components {
             /** Note */
             note: string;
         };
+        /** CoherenceReport */
+        CoherenceReport: {
+            /** Cross Venue */
+            cross_venue: components["schemas"]["CrossVenueRow"][];
+            /** Internal */
+            internal: components["schemas"]["InternalViolation"][];
+        };
+        /** CrossVenueRow */
+        CrossVenueRow: {
+            /**
+             * Devig Ref
+             * @description De-vigged sharp-book reference, if available.
+             */
+            devig_ref: number | null;
+            /** Event */
+            event: string;
+            /** Kalshi */
+            kalshi: number | null;
+            /** Max Spread Pp */
+            max_spread_pp: number;
+            /** Polymarket */
+            polymarket: number | null;
+        };
+        /** Envelope[CoherenceReport] */
+        Envelope_CoherenceReport_: {
+            data: components["schemas"]["CoherenceReport"];
+            provenance: components["schemas"]["Provenance"];
+        };
         /** Envelope[HealthData] */
         Envelope_HealthData_: {
             data: components["schemas"]["HealthData"];
@@ -226,6 +276,26 @@ export interface components {
             data: components["schemas"]["MatchPrediction"][];
             provenance: components["schemas"]["Provenance"];
         };
+        /**
+         * FairValueStep
+         * @description One step of the fair-value waterfall. Steps are ordered; value_after of
+         *     the last step IS the fair value - the decomposition must account for the
+         *     whole number or it is not a decomposition.
+         */
+        FairValueStep: {
+            /**
+             * Delta
+             * @description Signed contribution; the first step's delta is the model prob itself.
+             */
+            delta: number;
+            /**
+             * Label
+             * @enum {string}
+             */
+            label: "model_probability" | "fees" | "timing_lockup" | "resolution_risk";
+            /** Value After */
+            value_after: number;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -257,6 +327,25 @@ export interface components {
              */
             mode: "paper" | "live";
             venues: components["schemas"]["VenueStatus"];
+        };
+        /**
+         * InternalViolation
+         * @description Bracket-path product vs direct price, from the persisted joint draws.
+         */
+        InternalViolation: {
+            /** Description */
+            description: string;
+            /** Direct Price */
+            direct_price: number;
+            /** Gap Pp */
+            gap_pp: number;
+            /** Product Price */
+            product_price: number;
+            /**
+             * Safest Class
+             * @enum {string}
+             */
+            safest_class: "my-info" | "their-info" | "settlement-trap" | "incoherence";
         };
         /** LedgerEntry */
         LedgerEntry: {
@@ -354,12 +443,40 @@ export interface components {
             best_ask: number;
             /** Best Bid */
             best_bid: number;
+            /**
+             * Classification
+             * @enum {string}
+             */
+            classification: "my-info" | "their-info" | "settlement-trap" | "incoherence";
+            /** Contract Label */
+            contract_label: string;
+            /**
+             * Decomposition
+             * @description Fair-value waterfall; the last step's value_after equals fair.p.
+             */
+            decomposition: components["schemas"]["FairValueStep"][];
+            /** Depth Ask */
+            depth_ask: number;
+            /**
+             * Depth Bid
+             * @description Size available at best bid (contracts).
+             */
+            depth_bid: number;
             /** Edge After Fees */
             edge_after_fees: number;
+            /**
+             * Edge Risk Adjusted
+             * @description After-fee edge scaled by (1 - uncertainty); the board's ranking key.
+             */
+            edge_risk_adjusted: number;
+            fair: components["schemas"]["ProbWithBand"];
             /** Fair Value */
             fair_value: number;
+            settlement: components["schemas"]["SettlementMapping"];
             /** Ticker */
             ticker: string;
+            /** Uncertainty Score */
+            uncertainty_score: number;
             /**
              * Venue
              * @enum {string}
@@ -558,6 +675,24 @@ export interface components {
             /** Total Runs */
             total_runs: number;
         };
+        /**
+         * SettlementMapping
+         * @description The market's settlement text mapped to the model event it prices.
+         *     `confirmed=False` quarantines the contract: settlement-definition traps are
+         *     an edge CLASS, and an unreviewed mapping must be unactionable.
+         */
+        SettlementMapping: {
+            /** Confirmed */
+            confirmed: boolean;
+            /** Confirmed At */
+            confirmed_at?: string | null;
+            /** Market Text */
+            market_text: string;
+            /** Model Event */
+            model_event: string;
+            /** Note */
+            note?: string | null;
+        };
         /** TimelineEvent */
         TimelineEvent: {
             /**
@@ -634,6 +769,26 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    get_coherence_api_v1_coherence_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_CoherenceReport_"];
+                };
+            };
+        };
+    };
     get_health_api_v1_health_get: {
         parameters: {
             query?: never;

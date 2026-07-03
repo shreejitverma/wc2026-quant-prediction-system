@@ -71,10 +71,17 @@ export async function fetchRuns(): Promise<Envelope<RunsPage>> {
 }
 
 export type MatchDetail = components["schemas"]["MatchDetail"];
+export type CoherenceReport = components["schemas"]["CoherenceReport"];
+export type FairValueStep = components["schemas"]["FairValueStep"];
+export type SettlementMapping = components["schemas"]["SettlementMapping"];
 export type MatchTimeline = components["schemas"]["MatchTimeline"];
 export type ModelProbs = components["schemas"]["ModelProbs"];
 export type Attribution = components["schemas"]["Attribution"];
 export type ProbWithBand = components["schemas"]["ProbWithBand"];
+
+export async function fetchCoherence(): Promise<Envelope<CoherenceReport>> {
+  return unwrap(await client.GET("/api/v1/coherence"), "GET /api/v1/coherence");
+}
 
 export async function fetchMatchDetail(matchId: string): Promise<Envelope<MatchDetail>> {
   return unwrap(

@@ -126,11 +126,24 @@ class MatchPrediction(BaseModel):
 class MarketOpportunity(BaseModel):
     venue: Literal["kalshi", "polymarket"]
     ticker: str
+    contract_label: str
     fair_value: float
+    fair: ProbWithBand
     best_bid: float
     best_ask: float
+    depth_bid: int = Field(description="Size available at best bid (contracts).")
+    depth_ask: int
     edge_after_fees: float
+    edge_risk_adjusted: float = Field(
+        description="After-fee edge scaled by (1 - uncertainty); the board's ranking key."
+    )
+    uncertainty_score: float
+    classification: Literal["my-info", "their-info", "settlement-trap", "incoherence"]
     actionability: Literal["Tradeable", "Watch", "No Edge", "Unsafe", "Stale"]
+    decomposition: list[FairValueStep] = Field(
+        description="Fair-value waterfall; the last step's value_after equals fair.p."
+    )
+    settlement: SettlementMapping
 
 
 # --- Match Detail (Phase 2). Shapes mirror what the pipeline will persist:
@@ -247,3 +260,53 @@ class MatchTimeline(BaseModel):
     contract: str = Field(description="Which contract the series prices, e.g. 'home win'.")
     points: list[TimelinePoint]
     events: list[TimelineEvent]
+
+
+# --- Opportunity Board + coherence (Phase 3). Additive extension of
+# MarketOpportunity (non-breaking); shapes mirror pricing/{fair_value,
+# coherence,mapper}. Served source="mock" until pricing persists artifacts. ---
+
+
+class FairValueStep(BaseModel):
+    """One step of the fair-value waterfall. Steps are ordered; value_after of
+    the last step IS the fair value - the decomposition must account for the
+    whole number or it is not a decomposition."""
+
+    label: Literal["model_probability", "fees", "timing_lockup", "resolution_risk"]
+    delta: float = Field(description="Signed contribution; the first step's delta is the model prob itself.")
+    value_after: float
+
+
+class SettlementMapping(BaseModel):
+    """The market's settlement text mapped to the model event it prices.
+    `confirmed=False` quarantines the contract: settlement-definition traps are
+    an edge CLASS, and an unreviewed mapping must be unactionable."""
+
+    market_text: str
+    model_event: str
+    confirmed: bool
+    confirmed_at: str | None = None
+    note: str | None = None
+
+
+class CrossVenueRow(BaseModel):
+    event: str
+    kalshi: float | None
+    polymarket: float | None
+    devig_ref: float | None = Field(description="De-vigged sharp-book reference, if available.")
+    max_spread_pp: float
+
+
+class InternalViolation(BaseModel):
+    """Bracket-path product vs direct price, from the persisted joint draws."""
+
+    description: str
+    product_price: float
+    direct_price: float
+    gap_pp: float
+    safest_class: Literal["my-info", "their-info", "settlement-trap", "incoherence"]
+
+
+class CoherenceReport(BaseModel):
+    cross_venue: list[CrossVenueRow]
+    internal: list[InternalViolation]
