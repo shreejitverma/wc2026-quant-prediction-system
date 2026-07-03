@@ -1,0 +1,105 @@
+site_name: WC2026 Prediction System
+site_description: End-to-end quantitative prediction, pricing, and execution system for FIFA World Cup 2026.
+site_author: Shreejit Verma
+
+exclude_docs: |
+  **/0000-template.md
+  **/_template.md
+
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-night
+        name: Switch to light mode
+    - scheme: default
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      linenums: true
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.arithmatex:
+      generic: true
+  - attr_list
+  - md_in_html
+
+extra_javascript:
+  - https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.0/es5/tex-mml-chtml.js
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          paths: [src]
+          options:
+            show_source: true
+            show_root_heading: true
+            show_category_toc: true
+            import_impl: true
+
+nav:
+  - Home: index.md
+  - System Explanations:
+      - System Creed & Edge Thesis: explanation/design_creed.md
+      - The Honesty Harness: explanation/harness.md
+      - Model Theory & Derivations: explanation/model_theory.md
+      - Pricing & Market-Making: explanation/pricing_theory.md
+  - System Architecture: architecture.md
+  - Mathematical Modeling Suite: models.md
+  - API Surface Reference: api-surface.md
+  - Operational Runbook: runbook.md
+  - System Discrepancies: discrepancies.md
+  - ADRs Decision Log:
+      - ADR Index: adr/README.md
+      - "ADR-0001: Record Architecture Decisions": adr/0001-record-architecture-decisions.md
+      - "ADR-0002: Storage Stack - DuckDB + Parquet": adr/0002-storage-stack-duckdb-parquet.md
+      - "ADR-0003: Experiment Tracking - Local Runs Ledger": adr/0003-experiment-tracking-local-runs-ledger.md
+      - "ADR-0004: Append-Only Ledger Hash-Chain": adr/0004-append-only-ledger-hash-chain.md
+      - "ADR-0005: Single Point-in-Time Gate": adr/0005-point-in-time-gate.md
+      - "ADR-0006: Edge Thesis - Coherence & Timing": adr/0006-edge-thesis-coherence-settlement-timing.md
+      - "ADR-0007: Free-First Data Access": adr/0007-free-first-data-access.md
+      - "ADR-0008: Scope & Killswitch": adr/0008-scope-and-killswitch.md
+      - "ADR-0009: LLM News Router": adr/0009-llm-news-router-not-signal.md
+      - "ADR-0010: Fetch/Parse Separation": adr/0010-fetch-parse-separation.md
+      - "ADR-0011: Terminal UI Stack": adr/0011-terminal-ui-stack.md
+      - "ADR-0012: API Provenance Envelope": adr/0012-api-provenance-envelope.md
+      - "ADR-0013: Terminal Design System": adr/0013-terminal-design-system.md
+      - "ADR-0014: Multiplexed WebSocket": adr/0014-multiplexed-websocket.md
+      - "ADR-0015: Vite SPA Toolchain": adr/0015-vite-spa-toolchain.md
+      - "ADR-0016: Visualization Stack Split": adr/0016-visualization-stack-split.md
+  - Data Contracts:
+      - Contracts Overview: data_contracts/README.md
+      - Elo Ratings Schema: data_contracts/elo_ratings.md
+      - Kalshi Markets Schema: data_contracts/kalshi.md
+      - Polymarket API Schema: data_contracts/polymarket.md
+      - Results International Schema: data_contracts/results_international.md
+  - Model Cards:
+      - Model Index: model_cards/README.md
+  - Pre-registrations:
+      - Pre-registration Index: preregistrations/README.md

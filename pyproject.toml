@@ -33,6 +33,11 @@ dev = [
     "hypothesis>=6.100",
     "ruff>=0.6",
     "pre-commit>=3.7",
+    "mkdocs>=1.6.0",
+    "mkdocs-material>=9.5.0",
+    "mkdocstrings>=0.25.0",
+    "mkdocstrings-python>=1.10.0",
+    "linkchecker>=10.4.0",
 ]
 
 [build-system]

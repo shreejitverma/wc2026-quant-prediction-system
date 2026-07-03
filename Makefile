@@ -65,3 +65,14 @@ bootstrap-data:
 clean:
 	rm -rf .pytest_cache .ruff_cache
 	find . -type d -name __pycache__ -prune -exec rm -rf {} +
+
+docs:
+	$(UV) run mkdocs build
+
+docs-serve:
+	$(UV) run mkdocs serve -a 127.0.0.1:8001
+
+docs-verify:
+	$(UV) run mkdocs build --strict
+	$(UV) run python scripts/check_links.py
+

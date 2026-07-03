@@ -39,13 +39,13 @@ When these six models disagree, it is informative (high uncertainty). When they 
 
 | ID | Model Name | Source File | Status | Primary Input | Output |
 |----|-----------|------------|--------|--------------|--------|
-| M1 | Dixon-Coles Bivariate Poisson | [dixon_coles.py](../../src/wc2026/models/dixon_coles.py) | ✅ **Built** | Historical result scorelines | `ScoreDist` (15×15 matrix) + `ρ` low-score correction |
-| M2 | Dynamic State-Space Ratings | [state_space.py](../../src/wc2026/models/state_space.py) | ✅ **Built** | Rolling result time-series | Trending attack/defense ratings + `ScoreDist` |
-| M3 | Bayesian Hierarchical Goals | [hierarchical.py](../../src/wc2026/models/hierarchical.py) | ✅ **Built** | Historical results + priors | Full posterior `ScoreDist` distribution |
-| M4 | Player-Aggregation Team Strength | [player_agg.py](../../src/wc2026/models/player_agg.py) | ✅ **Built** (activates at lineup drop) | Player-level xG/xGA stats + confirmed XI | Lineup-conditional `ScoreDist` |
-| M5 | Gradient Boosting (LightGBM) | [gbm.py](../../src/wc2026/models/gbm.py) | ✅ **Built** | Multi-feature matrix (Elo, form, venue, rest) | Poisson goal rate predictions → `ScoreDist` |
-| M6 | Market-Implied Bivariate Poisson | [market_implied.py](../../src/wc2026/models/market_implied.py) | ✅ **Built** | De-vigged exchange prices | Inverted `ScoreDist` from market consensus |
-| ME | Meta-Ensembler (BFGS Log-Opinion Pooling) | [meta_ensemble.py](../../src/wc2026/models/meta_ensemble.py) | ✅ **Built** | M1–M6 `ScoreDist` matrices | Single canonical `ScoreDist` + ensemble weights |
+| M1 | Dixon-Coles Bivariate Poisson | [dixon_coles.py](file:///Users/shreejitverma/github/footbal_prediction/src/wc2026/models/dixon_coles.py) | ✅ **Built** | Historical result scorelines | `ScoreDist` (15×15 matrix) + `ρ` low-score correction |
+| M2 | Dynamic State-Space Ratings | [state_space.py](file:///Users/shreejitverma/github/footbal_prediction/src/wc2026/models/state_space.py) | ✅ **Built** | Rolling result time-series | Trending attack/defense ratings + `ScoreDist` |
+| M3 | Bayesian Hierarchical Goals | [hierarchical.py](file:///Users/shreejitverma/github/footbal_prediction/src/wc2026/models/hierarchical.py) | ✅ **Built** | Historical results + priors | Full posterior `ScoreDist` distribution |
+| M4 | Player-Aggregation Team Strength | [player_agg.py](file:///Users/shreejitverma/github/footbal_prediction/src/wc2026/models/player_agg.py) | ✅ **Built** (activates at lineup drop) | Player-level xG/xGA stats + confirmed XI | Lineup-conditional `ScoreDist` |
+| M5 | Gradient Boosting (LightGBM) | [gbm.py](file:///Users/shreejitverma/github/footbal_prediction/src/wc2026/models/gbm.py) | ✅ **Built** | Multi-feature matrix (Elo, form, venue, rest) | Poisson goal rate predictions → `ScoreDist` |
+| M6 | Market-Implied Bivariate Poisson | [market_implied.py](file:///Users/shreejitverma/github/footbal_prediction/src/wc2026/models/market_implied.py) | ✅ **Built** | De-vigged exchange prices | Inverted `ScoreDist` from market consensus |
+| ME | Meta-Ensembler (BFGS Log-Opinion Pooling) | [meta_ensemble.py](file:///Users/shreejitverma/github/footbal_prediction/src/wc2026/models/meta_ensemble.py) | ✅ **Built** | M1–M6 `ScoreDist` matrices | Single canonical `ScoreDist` + ensemble weights |
 
 ---
 

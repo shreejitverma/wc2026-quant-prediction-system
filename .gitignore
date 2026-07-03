@@ -31,3 +31,7 @@ fix_tests.py
 
 # e2e scratch ledger root (playwright)
 /e2e-data
+
+# MkDocs build directory
+/site
+
