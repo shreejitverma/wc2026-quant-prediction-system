@@ -6,112 +6,296 @@ The WC2026 quantitative system relies on a dynamically weighted ensemble of high
 
 ## 0. First-Principles: How Predictions Are Constructed From Scratch
 
-To understand the system, one must understand how a single historical match result eventually translates into a real-time contract quote on Kalshi or Polymarket. Below is the step-by-step mathematical progression of our prediction pipeline.
+> **Who is this for?** This section starts from absolute zero. You do not need a statistics background. We will build up from a simple question — *"How likely is it that Brazil beats France 2-1?"* — all the way to a live trading decision on a prediction market.
+
+To understand the system, one must understand how a single historical match result eventually translates into a real-time contract quote on Kalshi or Polymarket. Below is the conceptual pipeline:
 
 ```
-[Raw Historical Match Data]
+[Raw Historical Match Data: "Brazil 3-0 Serbia, 2022-11-24"]
            │
            ▼
-[Step 1: Fit Team Ratings] ──► Attacker Strength (α) & Defender Weakness (β)
-           │
+[Step 1: What does history tell us about each team's strength?]
+           │  → Attack Strength (α): "How many goals does Brazil tend to score?"
+           │  → Defense Weakness (β): "How many goals does France tend to concede?"
            ▼
-[Step 2: Match Expectation] ──► Home Expected Goals (λ) & Away Expected Goals (μ)
-           │
+[Step 2: For THIS specific match, what scoreline rates should we expect?]
+           │  → Home Expected Goals (λ): "Brazil vs France — expect ~1.5 goals for Brazil"
+           │  → Away Expected Goals (μ): "Brazil vs France — expect ~1.1 goals for France"
            ▼
-[Step 3: Joint Probability] ──► 15x15 Scoreline Matrix (ScoreDist)
-           │
+[Step 3: What is the probability of EACH exact scoreline (0-0, 1-0, 2-1, etc.)?]
+           │  → The 15×15 Scoreline Matrix (ScoreDist): a full probability map of every possible result
            ▼
-[Step 4: Tournament Sim] ──► 100,000-Path Monte Carlo Joint Standing Resolver
-           │
+[Step 4: Run the tournament 100,000 times, respecting all the complex bracket rules]
+           │  → "Brazil wins the World Cup" in 14,200 out of 100,000 simulations → 14.2% probability
            ▼
-[Step 5: Pricing & Edge] ──► Fair Value (FV) vs. Live Orderbook Bid/Ask → Trade
+[Step 5: Compare our probability to the prediction market price → trade if there's edge]
+           │  → Market says 12% → We say 14.2% → Buy the contract → $+0.022 edge per dollar
+           ▼
+[Execute Trade on Kalshi/Polymarket]
 ```
-
-### Step 1: Quantifying Individual Team Strength (Attack & Defense)
-We assume that goal scoring is a stochastic process. To model it, we must first isolate the intrinsic abilities of each team. We assign two relative parameters to every team $i$ in our database:
-*   **Attack Strength ($\alpha_i$)**: A team's scoring capacity.
-*   **Defense Weakness ($\beta_i$)**: A team's propensity to concede goals.
-
-These parameters are normalized around a global average of $1.0$.
-*   If Germany has an attack rating of $\alpha_{GER} = 1.30$, they are expected to score $30\%$ more goals than a globally average team against an average defense.
-*   If Italy has a defensive rating of $\beta_{ITA} = 0.85$, they are expected to concede $15\%$ fewer goals than a globally average defense against an average attack.
-
-These parameters are estimated by fitting historical matches (results database) using Maximum Likelihood Estimation (MLE) or Bayesian MCMC sampling.
-
-### Step 2: Colliding Strengths to Calculate Goal Expectations ($\lambda$ and $\mu$)
-When Team $i$ plays Team $j$, their individual parameters collide to yield the match-specific Expected Goals (rates):
-*   **$\lambda$ (Expected Goals for Team $i$)**:
-    $$
-    \lambda = \alpha_i \times \beta_j \times \gamma
-    $$
-*   **$\mu$ (Expected Goals for Team $j$)**:
-    $$
-    \mu = \alpha_j \times \beta_i
-    $$
-
-Where:
-*   $\gamma$ represents the **Home Advantage multiplier** (e.g. $1.20$, which scales up the home team's rate by $20\%$).
-*   If the match is played on a **neutral field** (like most fixtures in the World Cup tournament), $\gamma$ is set to $1.0$ (neutralized).
-
-### Step 3: Generating the Joint Scoreline Probability Matrix (`ScoreDist`)
-Football goals are discrete, non-negative, and rare events. We model the probability of Team $i$ scoring exactly $x$ goals using the Poisson Probability Mass Function (PMF):
-
-$$
-P(X=x; \lambda) = \frac{\lambda^x e^{-\lambda}}{x!}
-$$
-
-Assuming goal scoring is independent, the joint probability of Team $i$ scoring $x$ goals and Team $j$ scoring $y$ goals is the product of their individual probabilities:
-
-$$
-P(X=x, Y=y) = \left( \frac{\lambda^x e^{-\lambda}}{x!} \right) \times \left( \frac{\mu^y e^{-\mu}}{y!} \right)
-$$
-
-Because home and away goals are not perfectly independent in real matches, we apply a low-score dependency adjustment $\tau_{\lambda,\mu}(x,y)$ using a correlation parameter $\rho$:
-
-$$
-P_{adjusted}(X=x, Y=y) = P(X=x, Y=y) \times \tau_{\lambda,\mu}(x,y)
-$$
-
-This calculation is computed for all scoreline combinations up to a maximum goal limit (typically $14$), generating a **15x15 probability grid** (`ScoreDist`). By summing specific regions of this grid, we derive the exact moneyline probabilities:
-*   **Home Win Probability**: Sum of cells where $x > y$ (lower triangle).
-*   **Draw Probability**: Sum of cells where $x = y$ (diagonal).
-*   **Away Win Probability**: Sum of cells where $x < y$ (upper triangle).
-
-### Step 4: Resolving the Tournament's Joint Distribution (Monte Carlo Simulator)
-Individual match probabilities are not enough to price tournament contracts (e.g. "Argentina wins the World Cup") because the tournament bracket is a complex, conditionally dependent topology. If Brazil loses a group match, they change their group standing, shifting their knockout path and altering the survival probabilities of every other team in the bracket.
-
-To capture these joint correlations, we run a **100,000-path Monte Carlo Simulation**:
-1.  **Sample Scorelines**: For every group stage match, we draw a random float $U \sim \text{Uniform}(0, 1)$ and map it to the cumulative sum of that match's 15x15 `ScoreDist` matrix, yielding a single simulated scoreline (e.g. 2-1).
-2.  **Resolve Group Standings**: We compile points ($3$ for win, $1$ for draw). If teams are tied, we execute the strict FIFA ruleset:
-    *   Goal difference in all group matches.
-    *   Goals scored in all group matches.
-    *   Head-to-head records.
-3.  **Cross-Group Matching (3rd-Place Rules)**: The best four 3rd-place teams across the 12 groups advance. We map their permutations using pre-defined index grids to assign knockout matchups.
-4.  **Simulate Knockouts**: For each knockout round, we sample the match score. If it is a draw, we resolve the advancer via penalty shootout simulation.
-5.  **Accumulate Output**: Over 100k independent runs, we count the frequency of outcomes. If England wins the final in $12,400$ paths, their true conditional probability of winning the tournament is $12.4\%$.
-
-### Step 5: Deriving Fair Value and Quoting Edge
-A binary contract on Kalshi or Polymarket pays out $\$1.00$ if the event occurs, and $\$0.00$ if it does not.
-Under risk-neutral pricing, the **Fair Value (FV)** of the contract in dollars is equal to the probability derived from our Monte Carlo simulation:
-
-$$
-Price_{fair} = P(Event) \times \$1.00
-$$
-
-If the simulator determines that the USA has a $35\%$ probability of reaching the Quarterfinals, our Fair Value is $\$0.35$.
-We read the live market orderbook. If the current Ask price (to buy the contract) is $\$0.30$, we calculate our expected edge:
-
-$$
-Edge = Price_{fair} - Price_{ask} - Fee_{exchange}
-$$
-
-$$
-Edge = \$0.35 - \$0.30 - \$0.00 = +0.05 \quad (\text{or } +5\phi \text{ of edge})
-$$
-
-If the calculated edge exceeds our risk thresholds, the quoting engine instantly submits buy orders to capture the mispricing.
 
 ---
+
+### Step 1: What is "Team Strength"? How do we measure it?
+
+**Analogy**: Imagine you are a restaurant critic rating restaurants. You don't just count how many meals a restaurant has served — you rate them relative to the average restaurant. A restaurant rated $1.5$ is $50\%$ better than average. A restaurant rated $0.7$ is $30\%$ worse than average.
+
+We do the same thing for football teams. We assign each team **two relative scores**:
+
+*   **Attack Strength ($\alpha_i$)**: How many goals does this team score relative to an average team?
+*   **Defense Weakness ($\beta_i$)**: How many goals does this team concede relative to an average team?
+
+> **Important**: Both scores are normalized so that the global average of all teams is exactly $1.0$.
+
+**Worked Example:**
+| Team | Attack $\alpha$ | Defense $\beta$ | Interpretation |
+|------|----------------|----------------|----------------|
+| Brazil | 1.45 | 0.80 | Scores 45% more than average; concedes 20% fewer than average (strong all-round) |
+| France | 1.35 | 0.85 | Scores 35% more than average; concedes 15% fewer than average |
+| Morocco | 0.90 | 0.75 | Scores 10% less than average but concedes 25% fewer than average (defensive team) |
+| Saudi Arabia | 0.75 | 1.15 | Scores 25% less than average; concedes 15% more than average (weak team) |
+
+**How are these numbers estimated?** We feed the entire historical results database (thousands of international matches) into a mathematical optimization algorithm (called Maximum Likelihood Estimation). The optimizer finds the exact $\alpha$ and $\beta$ values for each team that best explain all the observed historical scorelines simultaneously.
+
+Formally, we find the values that maximize the likelihood of having observed all historical results. If our parameters say Germany should score 2 goals but Germany historically scores 1.6, the optimizer adjusts them until the model fits reality as closely as possible.
+
+---
+
+### Step 2: From Ratings to Expected Goals for a Specific Match
+
+**Analogy**: Now that you know the "strength rating" of each restaurant, you can predict the quality of a meal when they cook together. If a top-rated chef (strong attack $\alpha$) faces a weak sous-chef (weak defense $\beta$), you'd expect a lot of flavor (goals).
+
+When two teams meet, we combine their ratings to calculate two **Expected Goals (xG)** values: one for each team:
+
+*   **$\lambda$ (Expected Goals for the Home Team)**:
+    $$
+    \lambda = \alpha_{home} \times \beta_{away} \times \gamma
+    $$
+*   **$\mu$ (Expected Goals for the Away Team)**:
+    $$
+    \mu = \alpha_{away} \times \beta_{home}
+    $$
+
+**What does each term mean?**
+*   $\alpha_{home}$: How prolific is the home team's attack?
+*   $\beta_{away}$: How leaky is the away team's defense? (Higher = more goals conceded)
+*   $\gamma$: The **Home Advantage** multiplier. Teams playing at home historically score ~$15$-$25\%$ more goals due to crowd support, familiarity with pitch, and lack of travel fatigue. Typically $\gamma \approx 1.20$.
+*   For World Cup matches played on **neutral venues**, we set $\gamma = 1.0$ (no home advantage adjustment).
+
+**Worked Example — Brazil vs France at a Neutral Venue:**
+
+Using the ratings from Step 1 and $\gamma = 1.0$ (neutral):
+
+$$
+\lambda_{Brazil} = \alpha_{Brazil} \times \beta_{France} \times 1.0 = 1.45 \times 0.85 \times 1.0 = 1.23 \text{ expected goals}
+$$
+
+$$
+\mu_{France} = \alpha_{France} \times \beta_{Brazil} \times 1.0 = 1.35 \times 0.80 \times 1.0 = 1.08 \text{ expected goals}
+$$
+
+**Interpretation**: On average, if Brazil and France play this match many times, Brazil would score around 1.23 goals and France would score around 1.08 goals per game. This makes Brazil a slight favorite, but France is competitive.
+
+---
+
+### Step 3: From Expected Goals to a Full Scoreline Matrix
+
+We now know Brazil is expected to score 1.23 goals and France 1.08. But that's just the *average*. Football matches are not average — they are individual, unpredictable events. We need the full probability distribution of every possible outcome (0-0, 1-0, 2-1, 3-2, etc.).
+
+#### 3a. Why the Poisson Distribution?
+
+**Analogy**: Think of goals like cars passing through a quiet country road. On average, 3 cars pass per hour. But in any given hour, the number might be 0, 1, 2, 4, or even 7. The number of events in a fixed time window, when events are rare and random, follows a **Poisson distribution**.
+
+Football goals share all the same properties:
+*   They are rare (average $< 3$ per match).
+*   They happen at random moments, independently of each other.
+*   We have a known average rate ($\lambda$ or $\mu$ expected goals).
+
+So we use the **Poisson Probability Mass Function (PMF)** to compute the probability of scoring exactly $x$ goals given an expected rate $\lambda$:
+
+$$
+P(X = x \;|\; \lambda) = \frac{\lambda^x \cdot e^{-\lambda}}{x!}
+$$
+
+**Breaking down the formula piece by piece:**
+*   $\lambda$ = Expected goals (e.g. 1.23 for Brazil)
+*   $x$ = The exact number of goals we're calculating probability for (e.g. 0, 1, 2, 3...)
+*   $\lambda^x$ = The rate raised to the power of $x$: "how consistent is this rate with $x$ events?"
+*   $e^{-\lambda}$ = A normalizing factor ensuring all probabilities sum to 1 (where $e \approx 2.718$, Euler's number)
+*   $x!$ = "x factorial" = $x \times (x-1) \times ... \times 1$. This corrects for the number of ways $x$ events can be ordered.
+
+**Worked Example — Brazil scoring exactly 0, 1, 2, or 3 goals ($\lambda = 1.23$):**
+
+$$
+P(X=0) = \frac{1.23^0 \cdot e^{-1.23}}{0!} = \frac{1 \times 0.2923}{1} = 29.2\%
+$$
+
+$$
+P(X=1) = \frac{1.23^1 \cdot e^{-1.23}}{1!} = \frac{1.23 \times 0.2923}{1} = 35.9\%
+$$
+
+$$
+P(X=2) = \frac{1.23^2 \cdot e^{-1.23}}{2!} = \frac{1.513 \times 0.2923}{2} = 22.1\%
+$$
+
+$$
+P(X=3) = \frac{1.23^3 \cdot e^{-1.23}}{3!} = \frac{1.861 \times 0.2923}{6} = 9.1\%
+$$
+
+So Brazil scores 0 goals in a 1-in-3 chance, scores 1 goal in a 1-in-3 chance, and scores 2+ goals in roughly 1-in-3 chance. This makes intuitive sense for a strong team against a strong opponent.
+
+#### 3b. Combining the Two Distributions into a Scoreline Matrix
+
+Since Brazil's goals and France's goals are approximately **independent** (one team scoring doesn't directly cause or prevent the other from scoring), the probability of a specific exact scoreline $(x, y)$ is simply the **product** of their individual Poisson probabilities:
+
+$$
+P(\text{Brazil}=x, \text{France}=y) = P(X=x \;|\; \lambda_{Brazil}) \times P(Y=y \;|\; \mu_{France})
+$$
+
+**Worked Example — What is the probability of a 1-1 draw?**
+
+$$
+P(\text{Brazil}=1) = 35.9\%
+$$
+
+$$
+P(\text{France}=1) = \frac{1.08^1 \cdot e^{-1.08}}{1!} = \frac{1.08 \times 0.3396}{1} = 36.7\%
+$$
+
+$$
+P(\text{1-1 Draw}) = 0.359 \times 0.367 = 13.2\%
+$$
+
+We repeat this calculation for **every combination** of scorelines from 0-0 to 14-14, populating a 15×15 grid. This grid is called the **ScoreDist matrix** and it is the single most important data structure in our system. Here is a visual excerpt:
+
+```
+          France Goals (Y)
+          0      1      2      3
+Brazil  0 | 9.9% | 10.3% | 5.5% | 2.0% ...
+Goals   1 | 12.2%| 12.7% | 6.8% | 2.4% ...
+(X)     2 | 7.5% | 7.8%  | 4.2% | 1.5% ...
+        3 | 3.1% | 3.2%  | 1.7% | 0.6% ...
+        ...
+```
+
+*   **Brazil Win cells** (lower-left triangle, where $x > y$): Sum = ~53%
+*   **Draw cells** (diagonal, where $x = y$): Sum = ~26%
+*   **France Win cells** (upper-right triangle, where $x < y$): Sum = ~21%
+
+#### 3c. The Low-Score Correction ($\tau$ matrix)
+
+In pure Poisson theory, the 0-0 draw probability would be about 9.9%. But empirically, 0-0 draws, 1-0 wins, and 1-1 draws occur **slightly more often** than the pure independence assumption suggests. This is because of real-world tactical effects (teams defending a lead, match intensity management).
+
+The **Dixon-Coles $\tau$ correction** adjusts the probability of the four "low-score" cells using a **correlation parameter $\rho$** (typically a small negative number around $-0.12$):
+
+$$
+\tau_{\lambda,\mu}(x, y) =
+\begin{cases}
+1 - \lambda \mu \rho & \text{if } x=0, y=0 \quad \text{(increases 0-0 probability)}\\
+1 + \lambda \rho & \text{if } x=0, y=1 \quad \text{(adjusts 0-1 probability)}\\
+1 + \mu \rho & \text{if } x=1, y=0 \quad \text{(adjusts 1-0 probability)}\\
+1 - \rho & \text{if } x=1, y=1 \quad \text{(adjusts 1-1 probability)}\\
+1 & \text{otherwise} \quad \text{(no change for higher scores)}
+\end{cases}
+$$
+
+The adjusted probability becomes:
+
+$$
+P_{adjusted}(X=x, Y=y) = P(X=x, Y=y) \times \tau_{\lambda,\mu}(x, y)
+$$
+
+---
+
+### Step 4: From One Match to a Full Tournament Simulation
+
+**The core problem**: Even if we can price Brazil vs France perfectly, we cannot directly calculate "What is Brazil's probability of winning the World Cup?" by hand. The reason is that the tournament bracket is a **conditionally dependent** sequence of 104 matches.
+
+**Analogy**: Imagine a giant maze with 64 rooms. Whether Brazil ends up in Room 12 (a Quarterfinal against Argentina) or Room 7 (a Quarterfinal against Spain) depends on every single result in every single group. These dependencies make exact analytical calculation mathematically intractable. The only efficient approach is to **simulate the maze thousands of times**.
+
+#### 4a. The Monte Carlo Sampling Process
+
+For each of 100,000 independent simulations (called "paths"):
+
+1.  **Sample a Group Stage Scoreline**: For the Brazil vs France match, we draw a uniform random number $U \sim \text{Uniform}[0, 1]$ between 0 and 1. We then find the scoreline whose cumulative probability first exceeds $U$. If our cumulative scoreline matrix is:
+    *   0-0: cumulative probability 0-9.9%
+    *   1-0: cumulative probability 9.9%-22.1%
+    *   0-1: cumulative probability 22.1%-32.4%
+    *   1-1: cumulative probability 32.4%-45.1%
+    *   ...
+    And we drew $U = 0.38$, the simulation picks a **1-1 draw** (since 0.38 falls in the 32.4%-45.1% range).
+
+2.  **Repeat** this for all 48 Group Stage matches simultaneously.
+
+3.  **Compute Group Tables**: Award 3 points for win, 1 for draw, 0 for loss. Apply the strict FIFA tiebreaker rules in order:
+    1.  Points
+    2.  Goal Difference (GD)
+    3.  Goals Scored
+    4.  Head-to-Head points
+    5.  Head-to-Head GD
+    6.  Fair play points (yellow/red cards)
+    7.  FIFA ranking (last resort)
+
+4.  **Map to Knockout Bracket**: The top 2 from each group, plus the best 4 third-place teams, advance. Their positions in the bracket are assigned using pre-computed cross-group permutation index tables.
+
+5.  **Simulate the Knockout Rounds (R16 → QF → SF → Final)**: For knockout matches, a draw after 90 minutes is resolved by sampling a "penalty shootout winner" (50/50 or biased by M4 player-level penalty conversion stats).
+
+6.  **Record the Winner**: If Brazil wins the final in this simulation path, we add 1 to Brazil's counter.
+
+#### 4b. Aggregating Results into Probabilities
+
+After 100,000 simulations, we count how many times each team reached each stage:
+
+```
+Brazil wins Final:       14,200 / 100,000 = 14.2%
+France wins Final:       11,800 / 100,000 = 11.8%
+Brazil reaches Semi:     27,100 / 100,000 = 27.1%
+Brazil wins Group A:     68,000 / 100,000 = 68.0%
+```
+
+Each of these is now a **frequency estimate of a true conditional probability**, incorporating all tournament path dependencies. The **Central Limit Theorem** guarantees that the standard error of our estimate is approximately:
+
+$$
+SE = \sqrt{\frac{p(1-p)}{N}} = \sqrt{\frac{0.142 \times 0.858}{100000}} \approx 0.11\%
+$$
+
+So our 14.2% estimate has a statistical error of only ±0.11%.
+
+---
+
+### Step 5: Converting Probabilities to Prices and Finding Trading Edge
+
+**How do prediction markets work?** A contract on Kalshi/Polymarket for "Brazil wins the World Cup" pays $\$1.00$ if Brazil wins, $\$0.00$ if they don't. The contract currently trades at $\$0.12$ (meaning the market believes there is a 12% chance Brazil wins).
+
+**Our fair value**: Our simulation says Brazil wins 14.2% of paths. Therefore:
+
+$$
+\text{Fair Value} = P(\text{Brazil Wins}) \times \$1.00 = 0.142 \times \$1.00 = \$0.142
+$$
+
+**The edge calculation**: The market is mispricing this contract! The market price is $\$0.12$ but we estimate fair value at $\$0.142$. The exchange charges a maker fee of, say, $\$0.00$:
+
+$$
+Edge = \text{Fair Value} - \text{Market Ask} - \text{Exchange Fee}
+$$
+
+$$
+Edge = \$0.142 - \$0.120 - \$0.00 = +\$0.022 \text{ per contract}
+$$
+
+This means for every $\$1.00$ we invest buying this contract, we expect to profit $\$0.022$ on average (a $2.2\%$ expected return). Over many trades, this positive expectation compounds into consistent profitability.
+
+**Why does this mispricing exist?** The human traders setting the 12% market price are likely:
+1.  Not simulating the full tournament topology (they estimate Brazil's chances heuristically).
+2.  Not correctly accounting for the 3rd-place cross-group permutation rules that affect how Brazil's knockout bracket assembles.
+3.  Anchoring to Brazil's most recent form without properly accounting for opponent quality and venue effects.
+
+Our fully quantitative, mathematically rigorous system captures all of these factors in a single, internally consistent model.
+
+---
+
+---
+
 
 ## 1. M1: Dixon-Coles Bivariate Poisson (`dixon_coles.py`)
 
