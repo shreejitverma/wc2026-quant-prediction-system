@@ -310,3 +310,85 @@ class InternalViolation(BaseModel):
 class CoherenceReport(BaseModel):
     cross_venue: list[CrossVenueRow]
     internal: list[InternalViolation]
+
+
+# --- Tournament + joint-query (Phase 2/3). Every probability is COUNTED from
+# the draw table (mock_tournament.py now; the simulator's persisted draws
+# later), so n and Wilson CIs are real arithmetic. ---
+
+
+class TeamGroupProbs(BaseModel):
+    team: str
+    p_first: float
+    p_second: float
+    p_third: float
+    p_best_third_qualify: float = Field(
+        description="P(finishes 3rd AND advances among the 8 best thirds)."
+    )
+    p_advance: float = Field(description="P(reaches the round of 32 by any path).")
+
+
+class GroupTable(BaseModel):
+    group: str
+    teams: list[TeamGroupProbs]
+
+
+class ThirdPlaceCandidate(BaseModel):
+    team: str
+    group: str
+    p_third: float
+    p_qualify_given_third: float
+    p_best_third_qualify: float
+
+
+class AdvancementRow(BaseModel):
+    team: str
+    p_r32: float
+    p_r16: float
+    p_qf: float
+    p_sf: float
+    p_final: float
+    p_champion: float
+
+
+class WinnerProb(BaseModel):
+    team: str
+    p: ProbWithBand = Field(description="Wilson 95% interval from draw counts.")
+
+
+class TournamentState(BaseModel):
+    n_draws: int
+    groups: list[GroupTable]
+    third_place_race: list[ThirdPlaceCandidate]
+    advancement: list[AdvancementRow] = Field(description="Sorted by p_champion desc.")
+    winner: list[WinnerProb] = Field(description="Top teams by championship probability.")
+
+
+class SimQueryEvent(BaseModel):
+    team: str
+    outcome: Literal[
+        "wins_group",
+        "qualifies",
+        "reaches_r16",
+        "reaches_qf",
+        "reaches_sf",
+        "reaches_final",
+        "champion",
+    ]
+
+
+class SimQueryRequest(BaseModel):
+    events: list[SimQueryEvent] = Field(min_length=1, max_length=4)
+
+
+class SimQueryResult(BaseModel):
+    events: list[SimQueryEvent]
+    p: ProbWithBand = Field(description="Joint probability, Wilson 95% from counts.")
+    n_draws: int
+    n_hits: int
+    independent_product: float = Field(
+        description="Product of the marginal probabilities - what naive multiplication says."
+    )
+    dependence_ratio: float | None = Field(
+        description="p / independent_product; the coherence edge lives in this ratio. Null if product is 0."
+    )

@@ -31,13 +31,26 @@ from fastapi.middleware.cors import CORSMiddleware
 from ..ledger import AppendOnlyLedger
 from ..time_utils import from_iso, to_iso, utc_now
 from .deps import ApiState, get_state
+from .mock_tournament import (
+    GROUPS,
+    STAGE_CHAMPION,
+    STAGE_FINAL,
+    STAGE_QF,
+    STAGE_R16,
+    STAGE_R32,
+    STAGE_SF,
+    draw_table,
+    wilson_ci,
+)
 from .provenance import make_provenance
 from .schemas import (
+    AdvancementRow,
     Attribution,
     CoherenceReport,
     CrossVenueRow,
     Envelope,
     FairValueStep,
+    GroupTable,
     HealthData,
     InternalViolation,
     LedgerEntry,
@@ -54,10 +67,16 @@ from .schemas import (
     RunOut,
     RunsPage,
     SettlementMapping,
+    SimQueryRequest,
+    SimQueryResult,
+    TeamGroupProbs,
+    ThirdPlaceCandidate,
     TimelineEvent,
     TimelinePoint,
+    TournamentState,
     VenueInfo,
     VenueStatus,
+    WinnerProb,
 )
 from .ws import serve_ws
 
@@ -643,3 +662,115 @@ def get_coherence(state: StateDep) -> Envelope[CoherenceReport]:
 async def websocket_endpoint(websocket: WebSocket, state: StateDep) -> None:
     """Multiplexed topic stream; protocol and topics documented in ws.py (ADR-0014)."""
     await serve_ws(websocket, state)
+
+
+# --- Tournament + joint query (MOCK: counted from the deterministic draw
+# table in mock_tournament.py; swaps to the simulator's persisted draws) ----
+
+
+def _band_from_counts(hits: int, n: int) -> ProbWithBand:
+    lo, hi = wilson_ci(hits, n)
+    return ProbWithBand(p=hits / n if n else 0.0, lo=lo, hi=hi)
+
+
+@app.get("/api/v1/tournament", response_model=Envelope[TournamentState])
+def get_tournament(state: StateDep) -> Envelope[TournamentState]:
+    dt = draw_table(state.cfg.seed)
+    n = dt.n_draws
+
+    groups: list[GroupTable] = []
+    third_candidates: list[ThirdPlaceCandidate] = []
+    for g, letter in enumerate(GROUPS):
+        idx = [i for i in range(len(dt.teams)) if dt.group_of[i] == g]
+        rows = []
+        for i in idx:
+            ranks = dt.rank_in_group[:, i]
+            third = ranks == 3
+            n_third = int(third.sum())
+            n_bt = int(dt.best_third[:, i].sum())
+            rows.append(
+                TeamGroupProbs(
+                    team=dt.teams[i],
+                    p_first=float((ranks == 1).mean()),
+                    p_second=float((ranks == 2).mean()),
+                    p_third=float(third.mean()),
+                    p_best_third_qualify=n_bt / n,
+                    p_advance=float((dt.reached[:, i] >= STAGE_R32).mean()),
+                )
+            )
+            third_candidates.append(
+                ThirdPlaceCandidate(
+                    team=dt.teams[i],
+                    group=letter,
+                    p_third=n_third / n,
+                    p_qualify_given_third=(n_bt / n_third) if n_third else 0.0,
+                    p_best_third_qualify=n_bt / n,
+                )
+            )
+        rows.sort(key=lambda r: r.p_first, reverse=True)
+        groups.append(GroupTable(group=letter, teams=rows))
+
+    third_candidates.sort(key=lambda c: c.p_best_third_qualify, reverse=True)
+
+    advancement = [
+        AdvancementRow(
+            team=dt.teams[i],
+            p_r32=float((dt.reached[:, i] >= STAGE_R32).mean()),
+            p_r16=float((dt.reached[:, i] >= STAGE_R16).mean()),
+            p_qf=float((dt.reached[:, i] >= STAGE_QF).mean()),
+            p_sf=float((dt.reached[:, i] >= STAGE_SF).mean()),
+            p_final=float((dt.reached[:, i] >= STAGE_FINAL).mean()),
+            p_champion=float((dt.reached[:, i] >= STAGE_CHAMPION).mean()),
+        )
+        for i in range(len(dt.teams))
+    ]
+    advancement.sort(key=lambda a: a.p_champion, reverse=True)
+
+    winner = [
+        WinnerProb(
+            team=row.team,
+            p=_band_from_counts(int(round(row.p_champion * n)), n),
+        )
+        for row in advancement[:10]
+    ]
+
+    data = TournamentState(
+        n_draws=n,
+        groups=groups,
+        third_place_race=third_candidates[:16],
+        advancement=advancement[:16],
+        winner=winner,
+    )
+    return Envelope(data=data, provenance=make_provenance(state.cfg, source="mock"))
+
+
+@app.post("/api/v1/sim/query", response_model=Envelope[SimQueryResult])
+def sim_query(req: SimQueryRequest, state: StateDep) -> Envelope[SimQueryResult]:
+    """Joint probability of arbitrary event combinations, COUNTED from the
+    persisted draws - never multiplied marginals. The dependence_ratio next to
+    the counted joint is the coherence edge made visible (ADR-0006)."""
+    dt = draw_table(state.cfg.seed)
+    n = dt.n_draws
+    try:
+        masks = [dt.event_mask(e.team, e.outcome) for e in req.events]
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail={"code": "unknown_team", "team": str(exc)}) from exc
+
+    joint = masks[0].copy()
+    product = 1.0
+    for m in masks:
+        product *= float(m.mean())
+    for m in masks[1:]:
+        joint &= m
+    hits = int(joint.sum())
+    p = hits / n
+
+    data = SimQueryResult(
+        events=req.events,
+        p=_band_from_counts(hits, n),
+        n_draws=n,
+        n_hits=hits,
+        independent_product=product,
+        dependence_ratio=(p / product) if product > 0 else None,
+    )
+    return Envelope(data=data, provenance=make_provenance(state.cfg, source="mock"))

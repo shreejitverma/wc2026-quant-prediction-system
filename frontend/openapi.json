@@ -1,6 +1,49 @@
 {
   "components": {
     "schemas": {
+      "AdvancementRow": {
+        "properties": {
+          "p_champion": {
+            "title": "P Champion",
+            "type": "number"
+          },
+          "p_final": {
+            "title": "P Final",
+            "type": "number"
+          },
+          "p_qf": {
+            "title": "P Qf",
+            "type": "number"
+          },
+          "p_r16": {
+            "title": "P R16",
+            "type": "number"
+          },
+          "p_r32": {
+            "title": "P R32",
+            "type": "number"
+          },
+          "p_sf": {
+            "title": "P Sf",
+            "type": "number"
+          },
+          "team": {
+            "title": "Team",
+            "type": "string"
+          }
+        },
+        "required": [
+          "team",
+          "p_r32",
+          "p_r16",
+          "p_qf",
+          "p_sf",
+          "p_final",
+          "p_champion"
+        ],
+        "title": "AdvancementRow",
+        "type": "object"
+      },
       "Attribution": {
         "description": "Why the ensemble disagrees with the market, one feature at a time, in\nfootball language. delta_pp is signed percentage points toward `direction`.",
         "properties": {
@@ -244,6 +287,38 @@
         "title": "Envelope[RunsPage]",
         "type": "object"
       },
+      "Envelope_SimQueryResult_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/SimQueryResult"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          }
+        },
+        "required": [
+          "data",
+          "provenance"
+        ],
+        "title": "Envelope[SimQueryResult]",
+        "type": "object"
+      },
+      "Envelope_TournamentState_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/TournamentState"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          }
+        },
+        "required": [
+          "data",
+          "provenance"
+        ],
+        "title": "Envelope[TournamentState]",
+        "type": "object"
+      },
       "Envelope_list_MarketOpportunity__": {
         "properties": {
           "data": {
@@ -313,6 +388,27 @@
           "value_after"
         ],
         "title": "FairValueStep",
+        "type": "object"
+      },
+      "GroupTable": {
+        "properties": {
+          "group": {
+            "title": "Group",
+            "type": "string"
+          },
+          "teams": {
+            "items": {
+              "$ref": "#/components/schemas/TeamGroupProbs"
+            },
+            "title": "Teams",
+            "type": "array"
+          }
+        },
+        "required": [
+          "group",
+          "teams"
+        ],
+        "title": "GroupTable",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -1272,6 +1368,174 @@
         "title": "SettlementMapping",
         "type": "object"
       },
+      "SimQueryEvent": {
+        "properties": {
+          "outcome": {
+            "enum": [
+              "wins_group",
+              "qualifies",
+              "reaches_r16",
+              "reaches_qf",
+              "reaches_sf",
+              "reaches_final",
+              "champion"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "team": {
+            "title": "Team",
+            "type": "string"
+          }
+        },
+        "required": [
+          "team",
+          "outcome"
+        ],
+        "title": "SimQueryEvent",
+        "type": "object"
+      },
+      "SimQueryRequest": {
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/SimQueryEvent"
+            },
+            "maxItems": 4,
+            "minItems": 1,
+            "title": "Events",
+            "type": "array"
+          }
+        },
+        "required": [
+          "events"
+        ],
+        "title": "SimQueryRequest",
+        "type": "object"
+      },
+      "SimQueryResult": {
+        "properties": {
+          "dependence_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "p / independent_product; the coherence edge lives in this ratio. Null if product is 0.",
+            "title": "Dependence Ratio"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/SimQueryEvent"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "independent_product": {
+            "description": "Product of the marginal probabilities - what naive multiplication says.",
+            "title": "Independent Product",
+            "type": "number"
+          },
+          "n_draws": {
+            "title": "N Draws",
+            "type": "integer"
+          },
+          "n_hits": {
+            "title": "N Hits",
+            "type": "integer"
+          },
+          "p": {
+            "$ref": "#/components/schemas/ProbWithBand",
+            "description": "Joint probability, Wilson 95% from counts."
+          }
+        },
+        "required": [
+          "events",
+          "p",
+          "n_draws",
+          "n_hits",
+          "independent_product",
+          "dependence_ratio"
+        ],
+        "title": "SimQueryResult",
+        "type": "object"
+      },
+      "TeamGroupProbs": {
+        "properties": {
+          "p_advance": {
+            "description": "P(reaches the round of 32 by any path).",
+            "title": "P Advance",
+            "type": "number"
+          },
+          "p_best_third_qualify": {
+            "description": "P(finishes 3rd AND advances among the 8 best thirds).",
+            "title": "P Best Third Qualify",
+            "type": "number"
+          },
+          "p_first": {
+            "title": "P First",
+            "type": "number"
+          },
+          "p_second": {
+            "title": "P Second",
+            "type": "number"
+          },
+          "p_third": {
+            "title": "P Third",
+            "type": "number"
+          },
+          "team": {
+            "title": "Team",
+            "type": "string"
+          }
+        },
+        "required": [
+          "team",
+          "p_first",
+          "p_second",
+          "p_third",
+          "p_best_third_qualify",
+          "p_advance"
+        ],
+        "title": "TeamGroupProbs",
+        "type": "object"
+      },
+      "ThirdPlaceCandidate": {
+        "properties": {
+          "group": {
+            "title": "Group",
+            "type": "string"
+          },
+          "p_best_third_qualify": {
+            "title": "P Best Third Qualify",
+            "type": "number"
+          },
+          "p_qualify_given_third": {
+            "title": "P Qualify Given Third",
+            "type": "number"
+          },
+          "p_third": {
+            "title": "P Third",
+            "type": "number"
+          },
+          "team": {
+            "title": "Team",
+            "type": "string"
+          }
+        },
+        "required": [
+          "team",
+          "group",
+          "p_third",
+          "p_qualify_given_third",
+          "p_best_third_qualify"
+        ],
+        "title": "ThirdPlaceCandidate",
+        "type": "object"
+      },
       "TimelineEvent": {
         "properties": {
           "kind": {
@@ -1339,6 +1603,53 @@
           "hi"
         ],
         "title": "TimelinePoint",
+        "type": "object"
+      },
+      "TournamentState": {
+        "properties": {
+          "advancement": {
+            "description": "Sorted by p_champion desc.",
+            "items": {
+              "$ref": "#/components/schemas/AdvancementRow"
+            },
+            "title": "Advancement",
+            "type": "array"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/GroupTable"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "n_draws": {
+            "title": "N Draws",
+            "type": "integer"
+          },
+          "third_place_race": {
+            "items": {
+              "$ref": "#/components/schemas/ThirdPlaceCandidate"
+            },
+            "title": "Third Place Race",
+            "type": "array"
+          },
+          "winner": {
+            "description": "Top teams by championship probability.",
+            "items": {
+              "$ref": "#/components/schemas/WinnerProb"
+            },
+            "title": "Winner",
+            "type": "array"
+          }
+        },
+        "required": [
+          "n_draws",
+          "groups",
+          "third_place_race",
+          "advancement",
+          "winner"
+        ],
+        "title": "TournamentState",
         "type": "object"
       },
       "ValidationError": {
@@ -1436,6 +1747,24 @@
           "polymarket_enabled"
         ],
         "title": "VenueStatus",
+        "type": "object"
+      },
+      "WinnerProb": {
+        "properties": {
+          "p": {
+            "$ref": "#/components/schemas/ProbWithBand",
+            "description": "Wilson 95% interval from draw counts."
+          },
+          "team": {
+            "title": "Team",
+            "type": "string"
+          }
+        },
+        "required": [
+          "team",
+          "p"
+        ],
+        "title": "WinnerProb",
         "type": "object"
       }
     }
@@ -1766,6 +2095,63 @@
           }
         },
         "summary": "Get Run"
+      }
+    },
+    "/api/v1/sim/query": {
+      "post": {
+        "description": "Joint probability of arbitrary event combinations, COUNTED from the\npersisted draws - never multiplied marginals. The dependence_ratio next to\nthe counted joint is the coherence edge made visible (ADR-0006).",
+        "operationId": "sim_query_api_v1_sim_query_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimQueryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_SimQueryResult_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sim Query"
+      }
+    },
+    "/api/v1/tournament": {
+      "get": {
+        "operationId": "get_tournament_api_v1_tournament_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_TournamentState_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Tournament"
       }
     }
   }

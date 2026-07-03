@@ -179,10 +179,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sim/query": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sim Query
+         * @description Joint probability of arbitrary event combinations, COUNTED from the
+         *     persisted draws - never multiplied marginals. The dependence_ratio next to
+         *     the counted joint is the coherence edge made visible (ADR-0006).
+         */
+        post: operations["sim_query_api_v1_sim_query_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tournament": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Tournament */
+        get: operations["get_tournament_api_v1_tournament_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AdvancementRow */
+        AdvancementRow: {
+            /** P Champion */
+            p_champion: number;
+            /** P Final */
+            p_final: number;
+            /** P Qf */
+            p_qf: number;
+            /** P R16 */
+            p_r16: number;
+            /** P R32 */
+            p_r32: number;
+            /** P Sf */
+            p_sf: number;
+            /** Team */
+            team: string;
+        };
         /**
          * Attribution
          * @description Why the ensemble disagrees with the market, one feature at a time, in
@@ -264,6 +320,16 @@ export interface components {
             data: components["schemas"]["RunsPage"];
             provenance: components["schemas"]["Provenance"];
         };
+        /** Envelope[SimQueryResult] */
+        Envelope_SimQueryResult_: {
+            data: components["schemas"]["SimQueryResult"];
+            provenance: components["schemas"]["Provenance"];
+        };
+        /** Envelope[TournamentState] */
+        Envelope_TournamentState_: {
+            data: components["schemas"]["TournamentState"];
+            provenance: components["schemas"]["Provenance"];
+        };
         /** Envelope[list[MarketOpportunity]] */
         Envelope_list_MarketOpportunity__: {
             /** Data */
@@ -295,6 +361,13 @@ export interface components {
             label: "model_probability" | "fees" | "timing_lockup" | "resolution_risk";
             /** Value After */
             value_after: number;
+        };
+        /** GroupTable */
+        GroupTable: {
+            /** Group */
+            group: string;
+            /** Teams */
+            teams: components["schemas"]["TeamGroupProbs"][];
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -693,6 +766,76 @@ export interface components {
             /** Note */
             note?: string | null;
         };
+        /** SimQueryEvent */
+        SimQueryEvent: {
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "wins_group" | "qualifies" | "reaches_r16" | "reaches_qf" | "reaches_sf" | "reaches_final" | "champion";
+            /** Team */
+            team: string;
+        };
+        /** SimQueryRequest */
+        SimQueryRequest: {
+            /** Events */
+            events: components["schemas"]["SimQueryEvent"][];
+        };
+        /** SimQueryResult */
+        SimQueryResult: {
+            /**
+             * Dependence Ratio
+             * @description p / independent_product; the coherence edge lives in this ratio. Null if product is 0.
+             */
+            dependence_ratio: number | null;
+            /** Events */
+            events: components["schemas"]["SimQueryEvent"][];
+            /**
+             * Independent Product
+             * @description Product of the marginal probabilities - what naive multiplication says.
+             */
+            independent_product: number;
+            /** N Draws */
+            n_draws: number;
+            /** N Hits */
+            n_hits: number;
+            /** @description Joint probability, Wilson 95% from counts. */
+            p: components["schemas"]["ProbWithBand"];
+        };
+        /** TeamGroupProbs */
+        TeamGroupProbs: {
+            /**
+             * P Advance
+             * @description P(reaches the round of 32 by any path).
+             */
+            p_advance: number;
+            /**
+             * P Best Third Qualify
+             * @description P(finishes 3rd AND advances among the 8 best thirds).
+             */
+            p_best_third_qualify: number;
+            /** P First */
+            p_first: number;
+            /** P Second */
+            p_second: number;
+            /** P Third */
+            p_third: number;
+            /** Team */
+            team: string;
+        };
+        /** ThirdPlaceCandidate */
+        ThirdPlaceCandidate: {
+            /** Group */
+            group: string;
+            /** P Best Third Qualify */
+            p_best_third_qualify: number;
+            /** P Qualify Given Third */
+            p_qualify_given_third: number;
+            /** P Third */
+            p_third: number;
+            /** Team */
+            team: string;
+        };
         /** TimelineEvent */
         TimelineEvent: {
             /**
@@ -720,6 +863,25 @@ export interface components {
             market: number | null;
             /** Ts Utc */
             ts_utc: string;
+        };
+        /** TournamentState */
+        TournamentState: {
+            /**
+             * Advancement
+             * @description Sorted by p_champion desc.
+             */
+            advancement: components["schemas"]["AdvancementRow"][];
+            /** Groups */
+            groups: components["schemas"]["GroupTable"][];
+            /** N Draws */
+            n_draws: number;
+            /** Third Place Race */
+            third_place_race: components["schemas"]["ThirdPlaceCandidate"][];
+            /**
+             * Winner
+             * @description Top teams by championship probability.
+             */
+            winner: components["schemas"]["WinnerProb"][];
         };
         /** ValidationError */
         ValidationError: {
@@ -759,6 +921,13 @@ export interface components {
             kalshi_enabled: boolean;
             /** Polymarket Enabled */
             polymarket_enabled: boolean;
+        };
+        /** WinnerProb */
+        WinnerProb: {
+            /** @description Wilson 95% interval from draw counts. */
+            p: components["schemas"]["ProbWithBand"];
+            /** Team */
+            team: string;
         };
     };
     responses: never;
@@ -1024,6 +1193,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sim_query_api_v1_sim_query_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SimQueryRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_SimQueryResult_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_tournament_api_v1_tournament_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_TournamentState_"];
                 };
             };
         };

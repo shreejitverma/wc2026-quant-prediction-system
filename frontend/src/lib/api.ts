@@ -83,6 +83,21 @@ export async function fetchCoherence(): Promise<Envelope<CoherenceReport>> {
   return unwrap(await client.GET("/api/v1/coherence"), "GET /api/v1/coherence");
 }
 
+export type TournamentState = components["schemas"]["TournamentState"];
+export type SimQueryEvent = components["schemas"]["SimQueryEvent"];
+export type SimQueryResult = components["schemas"]["SimQueryResult"];
+
+export async function fetchTournament(): Promise<Envelope<TournamentState>> {
+  return unwrap(await client.GET("/api/v1/tournament"), "GET /api/v1/tournament");
+}
+
+export async function postSimQuery(events: SimQueryEvent[]): Promise<Envelope<SimQueryResult>> {
+  return unwrap(
+    await client.POST("/api/v1/sim/query", { body: { events } }),
+    "POST /api/v1/sim/query",
+  );
+}
+
 export async function fetchMatchDetail(matchId: string): Promise<Envelope<MatchDetail>> {
   return unwrap(
     await client.GET("/api/v1/matches/{match_id}", { params: { path: { match_id: matchId } } }),

@@ -174,12 +174,23 @@ Returns detected coherence violations across venues:
 
 ---
 
+### Tournament & Joint Queries
+
+#### `GET /api/v1/tournament`
+**Backing module**: `wc2026.api.mock_tournament` draw table (swaps to the simulator's persisted draws).
+**Status**: 🟡 **built, mock** — a real draw-counting engine over 20k fake draws; every probability (group positions, best-thirds, round-reach, winner) is counted from one table, and winner probabilities carry Wilson 95% intervals from the counts.
+
+#### `POST /api/v1/sim/query`
+**Status**: 🟡 **built, mock**
+
+Joint probability of 1–4 `(team, outcome)` events, COUNTED from the draws (never multiplied marginals). Returns `p` with Wilson CI, `n_draws`, `n_hits`, the naive `independent_product`, and `dependence_ratio` — the coherence edge made visible.
+
+---
+
 ## Planned Endpoints (Future Phases)
 
 | Endpoint | Description | Phase |
 |----------|-------------|-------|
-| `GET /api/v1/tournament` | Bracket/group/3rd-place probabilities from persisted simulator draws | 2 |
-| `POST /api/v1/sim/query` | Query the joint probability of any compound event from simulator draws | 2 |
 | `GET /api/v1/contracts/{id}/fair-value` | Full fair-value decomposition waterfall | 3 |
 | `GET /api/v1/books/{ticker}` | Live orderbook depth + recent history | 3 |
 | `GET /api/v1/portfolio` | Position view with correlation clusters and limit utilization | 4 |

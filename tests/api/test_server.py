@@ -238,3 +238,59 @@ def test_coherence_report_shapes(client: TestClient) -> None:
     assert spreads == sorted(spreads, reverse=True)
     for v in data["internal"]:
         assert abs((v["direct_price"] - v["product_price"]) * 100 - v["gap_pp"]) < 0.01
+
+
+# --- Tournament + joint query (counted from the mock draw table) -------------
+
+
+def test_tournament_counted_invariants(client: TestClient) -> None:
+    body = _envelope(client.get("/api/v1/tournament").json())
+    assert body["provenance"]["source"] == "mock"
+    d = body["data"]
+    assert d["n_draws"] > 0
+    assert len(d["groups"]) == 12
+    for g in d["groups"]:
+        assert len(g["teams"]) == 4
+        # Positions partition the group: each team's 1st/2nd/3rd/4th sums to 1.
+        for t in g["teams"]:
+            p4 = 1 - t["p_first"] - t["p_second"] - t["p_third"]
+            assert -1e-9 <= p4 <= 1
+            # advance = top2 + best-third path, so p_advance >= p1+p2 and
+            # the best-third contribution never exceeds p_third.
+            assert t["p_advance"] >= t["p_first"] + t["p_second"] - 1e-9
+            assert t["p_best_third_qualify"] <= t["p_third"] + 1e-9
+        # Exactly one group winner per draw: p_first sums to 1 within a group.
+        assert abs(sum(t["p_first"] for t in g["teams"]) - 1) < 1e-9
+    # Winner bands are ordered and counted.
+    for w in d["winner"]:
+        assert w["p"]["lo"] <= w["p"]["p"] <= w["p"]["hi"]
+    # Advancement rows are monotonically non-increasing across rounds.
+    for a in d["advancement"]:
+        seq = [a["p_r32"], a["p_r16"], a["p_qf"], a["p_sf"], a["p_final"], a["p_champion"]]
+        assert all(x >= y - 1e-9 for x, y in zip(seq, seq[1:]))
+
+
+def test_sim_query_joint_leq_marginals(client: TestClient) -> None:
+    q = {
+        "events": [
+            {"team": "Brazil", "outcome": "wins_group"},
+            {"team": "France", "outcome": "reaches_final"},
+        ]
+    }
+    body = _envelope(client.post("/api/v1/sim/query", json=q).json())
+    r = body["data"]
+    # Joint counted from draws can never exceed either marginal.
+    for ev in q["events"]:
+        single = _envelope(
+            client.post("/api/v1/sim/query", json={"events": [ev]}).json()
+        )["data"]
+        assert r["p"]["p"] <= single["p"]["p"] + 1e-9
+    assert r["n_hits"] == round(r["p"]["p"] * r["n_draws"])
+    assert r["p"]["lo"] <= r["p"]["p"] <= r["p"]["hi"]
+    # dependence ratio consistent with its parts
+    assert abs(r["dependence_ratio"] * r["independent_product"] - r["p"]["p"]) < 1e-9
+
+
+def test_sim_query_unknown_team_404(client: TestClient) -> None:
+    q = {"events": [{"team": "Narnia", "outcome": "champion"}]}
+    assert client.post("/api/v1/sim/query", json=q).status_code == 404
