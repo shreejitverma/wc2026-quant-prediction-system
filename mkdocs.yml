@@ -81,7 +81,13 @@ nav:
       - CLI & Make Targets: reference/cli_make.md
       - Metrics & Math Formulas: reference/metrics_formulas.md
       - Frontend Operator Console: reference/frontend.md
-  - Operational Runbook: runbook.md
+  - Operational Runbooks:
+      - Disaster Recovery & CLI: runbook.md
+      - Incident Triaging & SOPs: howto/operations.md
+  - How-To Guides:
+      - Add a Predictive Model: howto/add_model.md
+      - Add an Ingestion Pipeline: howto/add_data_source.md
+      - Run Backtests & Promotions: howto/backtest_evaluation.md
   - System Discrepancies: discrepancies.md
   - ADRs Decision Log:
       - ADR Index: adr/README.md
