@@ -72,7 +72,15 @@ nav:
       - Pricing & Market-Making: explanation/pricing_theory.md
   - System Architecture: architecture.md
   - Mathematical Modeling Suite: models.md
-  - API Surface Reference: api-surface.md
+  - System Reference:
+      - API Envelope Overview: api-surface.md
+      - FastAPI OpenAPI Spec: reference/api_openapi.md
+      - Python API Reference: reference/module_reference.md
+      - Data Dictionary & Schema: reference/data_dictionary.md
+      - Configuration Schema: reference/configuration.md
+      - CLI & Make Targets: reference/cli_make.md
+      - Metrics & Math Formulas: reference/metrics_formulas.md
+      - Frontend Operator Console: reference/frontend.md
   - Operational Runbook: runbook.md
   - System Discrepancies: discrepancies.md
   - ADRs Decision Log:

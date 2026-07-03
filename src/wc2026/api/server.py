@@ -580,7 +580,10 @@ def _mock_opportunity_rows(state: ApiState) -> list[MarketOpportunity]:
                 else f"{fx['home'].upper()}_{fx['away'].upper()}_TOTAL_GT_2_5_FT"
             )
             for venue in ("kalshi", "polymarket"):
-                rng = random.Random(hash((state.cfg.seed, i, contract, venue)) & 0xFFFFFFFF)
+                import hashlib
+                hash_str = f"{state.cfg.seed}-{i}-{contract}-{venue}"
+                hash_val = int(hashlib.sha256(hash_str.encode()).hexdigest(), 16) & 0xFFFFFFFF
+                rng = random.Random(hash_val)
                 fees = -round(rng.uniform(0.008, 0.018), 4)
                 timing = -round(rng.uniform(0.001, 0.006), 4)
                 resolution = -round(rng.uniform(0.002, 0.010), 4)
