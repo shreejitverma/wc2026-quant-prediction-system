@@ -63,6 +63,20 @@ Scans the live orderbooks across venues strictly to find cross-market arbitrage 
 ## 3. Continuous Integration & CD
 
 We enforce a strict CI pipeline to protect the mathematical integrity of the models.
+
+```mermaid
+flowchart LR
+    Commit[Developer Push/PR] --> Linter{Ruff Linter}
+    Linter -->|Pass| Tests{PyTest Suite}
+    Linter -->|Fail| Reject[Block PR]
+    Tests -->|Pass| Cov{Coverage Check}
+    Tests -->|Fail| Reject
+    Cov -->| >= 93% | Bench{PyTest-Benchmark}
+    Cov -->| < 93% | Reject
+    Bench -->|Pass| Merge[Merge to Main]
+    Bench -->|Fail (Slow)| Reject
+```
+
 The `.github/workflows/ci.yml` enforces the following gates on every pull request:
 1. **Linting**: Ruff formatting and type checking.
 2. **Unit Tests**: Full `pytest` suite execution.
@@ -95,5 +109,21 @@ If a live game experiences a sudden, unpredicted event (a red card, an instant g
 
 **Kill Switch Execution:**
 The orchestrator monitors real-time rapid odds shifts across sharp offshore books. If a shift exceeds a predefined $\Delta$, the `Quoting Engine` immediately executes a pull-all-quotes command to Polymarket/Kalshi. 
+
+```mermaid
+sequenceDiagram
+    participant OS as Offshore Sharp Books
+    participant Arb as Arbitrage Scanner
+    participant QE as Quoting Engine
+    participant Poly as Polymarket/Kalshi Orderbooks
+
+    OS->>Arb: Odds shift dramatically (Goal Scored)
+    Arb->>Arb: Calculate Delta
+    alt Delta > Anomaly_Threshold
+        Arb->>QE: TRIGGER KILL SWITCH
+        QE->>Poly: POST /cancel-all-orders (Latency < 200ms)
+        Poly-->>QE: 200 OK (Orders Pulled)
+    end
+```
 
 In manual emergencies, the kill switch can be tripped manually via the Next.js Operator Console (in the upper right Command Palette).

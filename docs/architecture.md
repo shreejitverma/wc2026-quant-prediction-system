@@ -53,14 +53,63 @@ We categorize incoming data into tiers based on velocity and structural reliabil
 
 ### 2. The Modeling Suite
 The system does not rely on a single model. It relies on a suite of specialized models combined dynamically.
+
+```mermaid
+stateDiagram-v2
+    [*] --> MetaModelEnsembler
+    
+    state MetaModelEnsembler {
+        direction LR
+        ContextCheck --> WeightingSystem
+        
+        state ContextCheck {
+            IsMatchToday? --> LineupReleased?
+            LineupReleased? --> Yes
+            LineupReleased? --> No
+        }
+        
+        state WeightingSystem {
+            Yes --> Heavy_M4_PlayerAgg
+            No --> Heavy_M1_M3_Stats
+            Heavy_M4_PlayerAgg --> Blend
+            Heavy_M1_M3_Stats --> Blend
+        }
+    }
+    
+    MetaModelEnsembler --> ScoreDist_Matrix
+```
+
 - **M1 (Dixon-Coles)**: A heavily optimized Poisson model providing base expectancy rates for goal scoring, factoring in attack/defense strength adjustments.
 - **M2 (State-Space)**: Tracks team form dynamically over time, highly responsive to recent shock results or injuries.
 - **M3 (Bayesian Hierarchical)**: Imposes rigid structural priors on teams based on Elo, preventing wild overfitting on small sample sizes (like group stage upsets).
 - **M4 (Player-Aggregate)**: Bottom-up aggregation of xG (expected goals) based on squad lineups.
-- **The Meta-Model Ensembler**: Evaluates the reliability of M1-M4 under current contextual conditions (e.g., M4 is weighted heavily only *after* the lineup drops 60 mins pre-match) and outputs a singular 15x15 `ScoreDist` probability matrix representing every possible match outcome.
+- **The Meta-Model Ensembler**: Evaluates the reliability of M1-M4 under current contextual conditions (e.g., M4 is weighted heavily only *after* the lineup drops 60 mins pre-match).
+
+#### The `ScoreDist` Matrix Explanation
+The output of the Ensembler is not a simple "Win/Draw/Loss" probability. It outputs a `ScoreDist` matrix, which is a literal 15x15 probability grid where the X-axis is the Home Team's goals (0 to 14) and the Y-axis is the Away Team's goals (0 to 14). The cell at `[1][0]` represents the exact mathematical probability of a 1-0 finish. By summing the diagonals and triangles of this matrix, we derive the exact Win/Draw/Loss and Over/Under probabilities.
 
 ### 3. The Tournament Simulator
 The `ScoreDist` matrices only predict individual matches. We run a **100,000-path Monte Carlo Simulator** to resolve the tournament's joint distribution.
+
+```mermaid
+sequenceDiagram
+    participant MM as Meta-Model
+    participant Sim as Monte Carlo Engine
+    participant Rules as FIFA Rule Resolver
+    participant FV as Fair Value Extraction
+    
+    MM->>Sim: Inject ScoreDist for all 104 matches
+    loop 100,000 Iterations
+        Sim->>Sim: Sample random scorelines for Group Stage
+        Sim->>Rules: Send simulated scores
+        Rules->>Rules: Resolve Goal Diff / H2H Tiebreakers
+        Rules->>Rules: Resolve 3rd-Place Cross-Group Permutations
+        Rules-->>Sim: Return Knockout Bracket
+        Sim->>Sim: Simulate Knockout Rounds to Final
+    end
+    Sim->>FV: Return full joint probability space
+```
+
 - **Topological Mapping**: Evaluates the strict FIFA ruleset (Goal Difference, Goals Scored, Head-to-Head) to simulate group stage standings.
 - **3rd Place Logic**: Extremely fast matrix operations to resolve the historically complex 3rd place progression permutations into the Round of 16.
 

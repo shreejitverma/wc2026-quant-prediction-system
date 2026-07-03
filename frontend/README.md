@@ -10,13 +10,46 @@ The goal is not a consumer-grade generic dashboard. The goal is the best possibl
 
 ---
 
-## 🛠️ Tech Stack & Tooling
+## 🛠️ Tech Stack & State Architecture
 
 - **Framework**: `Next.js` (App Router configuration)
 - **Data Fetching**: `TanStack Query (React Query)`. Used for robust background polling, caching, and synchronization with the FastAPI backend without overwhelming the browser thread.
 - **State Management**: `Zustand`. Used for global state holding the Paper Trading Blotter (`tradingStore.ts`) and tracking risk limits like `maxPositionSize`.
 - **Real-time Streaming**: Native `WebSockets`. Hooked up directly via React `useEffect` to stream live orderbook updates (Bids/Asks) rapidly directly into DOM components like the `MarketDepthPanel`.
 - **Styling**: `Tailwind CSS` heavily optimized for dark mode tabular displays.
+
+### Frontend Data Flow
+To prevent the React main thread from locking up during heavy market volatility, state is aggressively decoupled:
+
+```mermaid
+flowchart TD
+    subgraph Browser / React App
+        UI[React Components]
+        
+        subgraph State Managers
+            TQ[TanStack Query]
+            Z[Zustand Store]
+        end
+        
+        subgraph WebSockets
+            WS[Orderbook WS Client]
+        end
+        
+        UI -->|Reads Cache| TQ
+        UI -->|Reads Trading Limits| Z
+        WS -->|Streams DOM Updates| UI
+    end
+    
+    subgraph Python Backend
+        API[FastAPI Endpoints]
+        WS_API[FastAPI WS Server]
+    end
+    
+    TQ -.->|Polls every 5s| API
+    WS -.->|Persistent TCP Connection| WS_API
+    UI -->|Executes Trade| Z
+    Z -->|Posts Trade| API
+```
 
 ---
 

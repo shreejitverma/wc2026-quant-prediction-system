@@ -6,6 +6,12 @@ This system is designed for **operator-driven, quantitative execution** on predi
 
 > **Our Edge:** Edge in this system is defined by model quality, information *timing* (e.g. lineup drops 60 mins pre-kickoff), settlement-rule precision (how FIFA tiebreakers resolve), and cross-market joint coherence. Edge is **not** high-frequency speed. See `docs/adr/0006`.
 
+### Why Coherence Pricing beats Speed
+Most prediction markets fail at pricing conditional events correctly. For example, if France scores an early goal against Brazil in Group G, human traders will immediately drop Brazil's odds of winning that specific match. 
+
+However, they often forget to simultaneously short Brazil's odds of "Winning the World Cup" or adjusting Argentina's odds of facing Brazil in the Quarterfinals. 
+Our **Coherence Pricing** edge relies on solving the *entire* tournament mathematically every time a single event changes, allowing us to find arbitrage in these secondary and tertiary derivative markets while retail traders focus on the primary event.
+
 ---
 
 ## 🚀 Quick Start
@@ -37,7 +43,7 @@ uv run python -m wc2026.ops.cron coherence   # Verify cross-market pricing coher
 
 ---
 
-## 🏗️ System Architecture
+## 🏗️ System Architecture & Data Provenance
 
 The project consists of an **Execution Loop** bolted to an **Honesty Harness**. 
 
@@ -65,6 +71,27 @@ graph TD
     end
     
     J -.->|Records Trades & Quotes| L
+```
+
+### Data Provenance Flowchart
+Before a model can generate a prediction, data must pass through the rigid provenance and Point-In-Time (PIT) pipeline to guarantee we never leak future data into a past backtest:
+
+```mermaid
+sequenceDiagram
+    participant API as External Data (FBref)
+    participant Raw as Raw File Store
+    participant Clean as Normalization Layer
+    participant PIT as Point-in-Time Gate
+    participant FS as DuckDB Feature Store
+
+    API->>Raw: Fetch JSON/HTML (Timestamped)
+    Raw->>Raw: Hash payload (SHA-256)
+    Raw->>Clean: Load raw strings
+    Clean->>Clean: Normalize to Pandas DataFrame
+    Clean->>PIT: Request Feature at Time T
+    PIT->>PIT: Filter out ALL rows > Time T
+    PIT->>FS: Write clean, leak-free Parquet
+    FS-->>Models: Safe Feature Vectors
 ```
 
 ### Components Breakdown:
