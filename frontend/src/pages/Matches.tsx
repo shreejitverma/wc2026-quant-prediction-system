@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query"
 import { fetchMatches, type MatchPrediction } from "@/lib/api"
 import { ProvenanceChip, SourceBanner } from "@/components/Provenance"
 import { ProbabilityBar } from "@/components/primitives/ProbabilityBar"
+import { localWithOffset } from "@/lib/time"
 
 export default function MatchesPage() {
   const { data: envelope, isLoading } = useQuery({ queryKey: ['matches'], queryFn: fetchMatches })
@@ -27,7 +28,7 @@ export default function MatchesPage() {
               <div className="p-6 flex-1 border-b md:border-b-0 md:border-r bg-card/50">
                 <div className="flex items-center justify-between mb-4">
                   <Badge variant="outline">Group Stage</Badge>
-                  <span className="text-xs text-muted-foreground">Updated: {new Date(match.freshness_utc).toLocaleString()}</span>
+                  <span className="text-xs text-muted-foreground">Updated: {localWithOffset(match.freshness_utc)}</span>
                 </div>
                 <div className="flex justify-between items-center text-2xl font-black tracking-tighter">
                   <span>{match.home_team}</span>

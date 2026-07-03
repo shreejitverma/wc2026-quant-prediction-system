@@ -6,6 +6,7 @@
  */
 import { AlertTriangle } from "lucide-react";
 import type { Provenance } from "@/lib/api";
+import { localWithOffset, utcShort } from "@/lib/time";
 
 export function SourceBanner({ provenances }: { provenances: (Provenance | undefined)[] }) {
   const mock = provenances.filter((p) => p?.source === "mock").length;
@@ -13,7 +14,7 @@ export function SourceBanner({ provenances }: { provenances: (Provenance | undef
   return (
     <div
       role="status"
-      className="flex items-center gap-2 rounded-md border border-amber-500/60 bg-amber-500/15 px-3 py-2 text-sm font-semibold text-amber-500"
+      className="flex items-center gap-2 rounded-md border border-status-warn/60 bg-status-warn/15 px-3 py-2 text-sm font-semibold text-status-warn"
     >
       <AlertTriangle className="h-4 w-4 shrink-0" />
       MOCK DATA — this screen is not wired to the real pipeline yet. Do not act on these numbers.
@@ -31,7 +32,9 @@ export function ProvenanceChip({ provenance }: { provenance: Provenance | undefi
       title={`config ${provenance.config_hash.slice(0, 12)} · generated ${provenance.generated_at}`}
     >
       <span>{provenance.source === "mock" ? "MOCK" : commit}</span>
-      <span>as of {new Date(asOf).toLocaleString()}</span>
+      <span>
+        as of {utcShort(asOf)} · {localWithOffset(asOf)}
+      </span>
     </span>
   );
 }

@@ -9,7 +9,10 @@ import { ProvenanceChip, SourceBanner } from "@/components/Provenance"
 export default function MarketsPage() {
   const { data: envelope, isLoading } = useQuery({ queryKey: ['opportunities'], queryFn: fetchOpportunities })
   const health = useQuery({ queryKey: ['health'], queryFn: fetchHealth })
-  const minEdge = health.data?.data.min_edge ?? 0.03
+  // The stay-flat threshold comes from backend config only. If health is
+  // unavailable the honest fallback is "cannot assess edge" (+Infinity blanks
+  // every badge to no-edge), never a number invented client-side.
+  const minEdge = health.data?.data.min_edge ?? Number.POSITIVE_INFINITY
   const markets = envelope?.data
 
   if (isLoading) return <div className="p-8 text-center text-muted-foreground animate-pulse">Loading markets...</div>
@@ -53,7 +56,13 @@ export default function MarketsPage() {
                     {m.fair_value.toFixed(2)}
                   </TableCell>
                   <TableCell className="text-right">
-                    <EdgeBadge edgeAfterFees={m.edge_after_fees} minEdge={minEdge} />
+                    <EdgeBadge
+                      edgeAfterFees={m.edge_after_fees}
+                      minEdge={minEdge}
+                      stale={m.actionability === 'Stale'}
+                      unconfirmedMapping={m.actionability === 'Unsafe'}
+                      marketInsideBand={m.actionability === 'No Edge'}
+                    />
                   </TableCell>
                   <TableCell className="text-right">
                     <Badge variant={m.actionability === 'Tradeable' ? 'default' : 'secondary'}>

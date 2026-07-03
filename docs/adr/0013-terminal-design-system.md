@@ -18,8 +18,10 @@ Three reserved color jobs, never mixed, defined as CSS tokens in `globals.css` a
   Deliberately **not** green/red: avoids the deutan red/green trap and the "green = go" reflex; green is reserved for status-good and rarely appears.
 - **Uncertainty**: neutral gray `#9ca3af` only, as a translucent band.
   A band must never wear a direction hue — uncertainty visually cannot be misread as favor.
-- **Status (reserved, never themed)**: good `#0ca30c`, warning `#fab219` (stale/mock), serious `#ec835a`, critical `#d03b3b` (LIVE mode, kill, broken chain).
+- **Status (reserved, never themed)**: good `#0ca30c`, warning `#fab219` (stale/mock), serious `#ec835a`, critical `#dd5757` (LIVE mode, kill, broken chain).
   Status ships with icon + label, never color alone.
+  (Correction 2026-07-02: critical was `#d03b3b`, which met the 3:1 graphical floor but failed WCAG AA 4.5:1 for the small text that wears it — KILL button, LIVE badge, API DOWN — measuring 4.12:1 on the background and 3.73:1 on cards; `#dd5757` keeps the hue and passes both.
+  The whole palette contract is now enforced by `src/lib/designTokens.test.ts`: text tokens ≥4.5:1 on both dark surfaces, series tokens ≥3:1, so a palette edit that breaks contrast fails CI.)
 - **Series 1–8** for model-comparison charts (Phase 5): the validated dark categorical set, assigned in fixed order, never cycled; CVD floor band (10.3) means direct labels are mandatory, which the chart specs require anyway.
 
 Companion rules baked into the base layer and primitives:

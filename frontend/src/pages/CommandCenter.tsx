@@ -4,6 +4,7 @@ import { Activity, AlertTriangle, BookLock, Shield } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchHealth, fetchOpportunities } from "@/lib/api";
 import { ProvenanceChip, SourceBanner } from "@/components/Provenance";
+import { EdgeBadge } from "@/components/primitives/EdgeBadge";
 
 /**
  * Command Center, Phase 0 scope: every number on this page is either real
@@ -23,7 +24,7 @@ export default function GlobalCommandCenter() {
     );
   if (health.isError)
     return (
-      <div className="p-8 text-center text-red-500">
+      <div className="p-8 text-center text-status-critical">
         API unreachable — is the backend running? (make api)
       </div>
     );
@@ -60,7 +61,7 @@ export default function GlobalCommandCenter() {
           <CardContent>
             <div
               className={`text-2xl font-bold uppercase tabular-nums ${
-                h?.data_status === "ok" ? "" : "text-amber-500"
+                h?.data_status === "ok" ? "" : "text-status-warn"
               }`}
             >
               {h?.data_status}
@@ -140,9 +141,16 @@ export default function GlobalCommandCenter() {
                     </div>
                     <div className="flex flex-col items-end">
                       <span className="text-muted-foreground text-xs">Edge</span>
-                      <span className="font-bold">
-                        {(opp.edge_after_fees * 100).toFixed(1)}%
-                      </span>
+                      {/* EdgeBadge precedence, not a naked bold number: the
+                          stay-flat threshold and the venue's actionability
+                          verdict gate the display (ADR-0013). */}
+                      <EdgeBadge
+                        edgeAfterFees={opp.edge_after_fees}
+                        minEdge={h?.min_edge ?? Number.POSITIVE_INFINITY}
+                        stale={opp.actionability === "Stale"}
+                        unconfirmedMapping={opp.actionability === "Unsafe"}
+                        marketInsideBand={opp.actionability === "No Edge"}
+                      />
                     </div>
                   </div>
                 </div>

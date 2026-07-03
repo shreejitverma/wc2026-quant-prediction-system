@@ -47,11 +47,14 @@ export function Topbar() {
       </div>
       <div className="flex items-center space-x-3">
         <span
-          className="font-mono text-[10px] uppercase text-muted-foreground"
+          className={`font-mono text-[10px] uppercase ${
+            // A dead live-feed must not be quieter than a healthy one.
+            wsStatus === "down" ? "text-status-warn" : "text-muted-foreground"
+          }`}
           data-ws-status={wsStatus}
           title="WebSocket feed status"
         >
-          {wsStatus === "open" ? "ws ●" : wsStatus === "connecting" ? "ws …" : "ws ○"}
+          {wsStatus === "open" ? "ws ●" : wsStatus === "connecting" ? "ws …" : "ws ○ down"}
         </span>
 
         {health.isError || !h ? (

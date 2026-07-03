@@ -137,7 +137,10 @@
   --status-good: #0ca30c;
   --status-warn: #fab219;
   --status-serious: #ec835a;
-  --status-critical: #d03b3b;
+  /* #d03b3b failed WCAG AA for small text (4.12:1 on bg, 3.73:1 on card) -
+     and critical is worn by the KILL button, LIVE badge and API DOWN text.
+     #dd5757 keeps the hue and passes both surfaces (designTokens.test.ts). */
+  --status-critical: #dd5757;
   --series-1: #3987e5;
   --series-2: #199e70;
   --series-3: #c98500;

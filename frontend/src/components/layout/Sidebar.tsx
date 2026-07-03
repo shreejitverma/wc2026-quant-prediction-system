@@ -35,7 +35,7 @@ export function Sidebar() {
       </div>
       <div className="flex-1 overflow-auto py-2">
         <nav className="grid gap-1 px-2">
-          {NAV_ITEMS.map((item) => {
+          {NAV_ITEMS.map((item, i) => {
             const active = pathname === item.href;
             return (
               <Link
@@ -48,13 +48,16 @@ export function Sidebar() {
               >
                 <item.icon className="h-4 w-4" />
                 {item.name}
+                <kbd aria-hidden="true" className="ml-auto font-mono text-[10px] text-muted-foreground/60">
+                  {i + 1}
+                </kbd>
               </Link>
             );
           })}
         </nav>
       </div>
       <div className="border-t px-4 py-2 text-[10px] text-muted-foreground">
-        ⌘K palette · ⇧⌘K kill switch
+        ⌘K palette · ⇧⌘K kill switch · 1-9 screens
       </div>
     </div>
   );
