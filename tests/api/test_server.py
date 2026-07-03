@@ -294,3 +294,78 @@ def test_sim_query_joint_leq_marginals(client: TestClient) -> None:
 def test_sim_query_unknown_team_404(client: TestClient) -> None:
     q = {"events": [{"team": "Narnia", "outcome": "champion"}]}
     assert client.post("/api/v1/sim/query", json=q).status_code == 404
+
+
+# --- Phase 4: fenced commands (REAL ledger writes) + console -----------------
+
+
+def test_kill_switch_is_idempotent_and_ledgered(client: TestClient, state: ApiState) -> None:
+    r1 = _envelope(client.post("/api/v1/commands/kill-switch", json={"reason": "test kill"}).json())
+    assert r1["provenance"]["source"] == "real"
+    assert r1["data"]["accepted"] and not r1["data"]["already"]
+    seq = r1["data"]["ledger_seq"]
+    assert seq is not None
+    # Second kill: idempotent - accepted, already, NO new ledger entry.
+    r2 = _envelope(client.post("/api/v1/commands/kill-switch", json={"reason": "again"}).json())
+    assert r2["data"]["already"] and r2["data"]["ledger_seq"] is None
+    entries = AppendOnlyLedger(state.ledger_path).read_all()
+    assert sum(1 for e in entries if e["kind"] == "command") == 1
+    # The command is in the hash chain and health screams.
+    assert AppendOnlyLedger(state.ledger_path).verify_chain()
+    health = _envelope(client.get("/api/v1/health").json())["data"]
+    assert health["killed"] is True
+
+
+def test_resume_refused_while_killed(client: TestClient) -> None:
+    client.post("/api/v1/commands/quoting/T1/pause", json={})
+    client.post("/api/v1/commands/kill-switch", json={"reason": "fence test"})
+    r = client.post("/api/v1/commands/quoting/T1/resume", json={})
+    assert r.status_code == 409
+    assert r.json()["detail"]["code"] == "killed"
+
+
+def test_pause_resume_fold_and_idempotence(client: TestClient, state: ApiState) -> None:
+    t = "KX-TEST"
+    r1 = _envelope(client.post(f"/api/v1/commands/quoting/{t}/pause", json={}).json())["data"]
+    assert not r1["already"] and t in r1["state"]["paused_tickers"]
+    r2 = _envelope(client.post(f"/api/v1/commands/quoting/{t}/pause", json={}).json())["data"]
+    assert r2["already"] and r2["ledger_seq"] is None
+    r3 = _envelope(client.post(f"/api/v1/commands/quoting/{t}/resume", json={}).json())["data"]
+    assert not r3["already"] and t not in r3["state"]["paused_tickers"]
+    # State is a fold over the ledger: a fresh read reproduces it (restart-safe).
+    s = _envelope(client.get("/api/v1/commands/state").json())["data"]
+    assert s["paused_tickers"] == {}
+    assert sum(1 for e in AppendOnlyLedger(state.ledger_path).read_all() if e["kind"] == "command") == 2
+
+
+def test_widen_factor_clamped(client: TestClient) -> None:
+    r = _envelope(client.post("/api/v1/commands/quoting/widen-all", json={"factor": 99}).json())["data"]
+    assert r["state"]["widen_factor"] == 3.0
+
+
+def test_console_quotes_real_engine_and_status(client: TestClient) -> None:
+    ticker = _envelope(client.get("/api/v1/opportunities").json())["data"][0]["ticker"]
+    body = _envelope(client.get(f"/api/v1/console/{ticker}").json())
+    c = body["data"]
+    q = c["quote_inputs"]
+    assert 0.01 <= q["bid"] < q["ask"] <= 0.99
+    assert q["spread"] >= q["fee_floor"] - 1e-9  # fee floor enforced
+    assert c["quoting_status"] == "active" and c["my_quotes"]["active"]
+    # Pause pulls the console's quotes.
+    client.post(f"/api/v1/commands/quoting/{ticker}/pause", json={})
+    c2 = _envelope(client.get(f"/api/v1/console/{ticker}").json())["data"]
+    assert c2["quoting_status"] == "paused" and not c2["my_quotes"]["active"]
+    # Widen-all widens the spread.
+    client.post("/api/v1/commands/quoting/widen-all", json={"factor": 2.0})
+    c3 = _envelope(client.get(f"/api/v1/console/{ticker}").json())["data"]
+    assert c3["quote_inputs"]["spread"] > q["spread"]
+    assert client.get("/api/v1/console/NOPE").status_code == 404
+
+
+def test_portfolio_clusters(client: TestClient) -> None:
+    body = _envelope(client.get("/api/v1/portfolio").json())
+    p = body["data"]
+    assert p["clusters"]
+    for c in p["clusters"]:
+        assert abs(c["utilization"] - abs(c["net_exposure_usd"]) / c["limit_usd"]) < 1e-6
+    assert abs(p["total_exposure_usd"] - sum(c["net_exposure_usd"] for c in p["clusters"])) < 1e-6

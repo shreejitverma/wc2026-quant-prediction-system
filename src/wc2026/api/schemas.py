@@ -52,6 +52,10 @@ class HealthData(BaseModel):
     max_data_staleness_seconds: int
     min_edge: float
     kill_switch_enabled: bool
+    killed: bool = Field(
+        default=False,
+        description="True when a kill command is in the ledger; re-arming is a CLI act.",
+    )
     venues: VenueStatus
 
 
@@ -392,3 +396,108 @@ class SimQueryResult(BaseModel):
     dependence_ratio: float | None = Field(
         description="p / independent_product; the coherence edge lives in this ratio. Null if product is 0."
     )
+
+
+# --- MM Console + fenced commands (Phase 4). Command state is REAL (derived
+# from ledger command entries); book/fills/portfolio are mock until execution
+# runs. Quote math routes through the real execution.quoting engine. ---
+
+
+class BookLevel(BaseModel):
+    price: float
+    size: int
+
+
+class MyQuotes(BaseModel):
+    bid: float
+    ask: float
+    size: int
+    active: bool = Field(description="False when paused or killed - quotes pulled.")
+
+
+class QuoteInputs(BaseModel):
+    """The quote formula's INPUTS, not just its output (Avellaneda-Stoikov via
+    execution.quoting). The operator must see why the spread/skew is what it is."""
+
+    fair_value: float
+    variance: float
+    inventory: float
+    time_to_settlement_days: float
+    gamma: float
+    fee_floor: float
+    widen_factor: float
+    news_state: Literal["normal", "lineup-window", "post-goal", "quarantined"]
+    bid: float
+    ask: float
+    spread: float
+    skew: float = Field(description="Reservation-price shift vs fair value (inventory shade).")
+
+
+class Fill(BaseModel):
+    ts_utc: str
+    ticker: str
+    side: Literal["buy", "sell"]
+    price: float
+    size: int
+    context: str = Field(description="What was happening when this fill occurred.")
+
+
+class ConsoleState(BaseModel):
+    ticker: str
+    book_bids: list[BookLevel]
+    book_asks: list[BookLevel]
+    book_as_of: str
+    my_quotes: MyQuotes
+    quote_inputs: QuoteInputs
+    quoting_status: Literal["active", "paused", "killed"]
+    fills: list[Fill]
+
+
+class ClusterPosition(BaseModel):
+    ticker: str
+    qty: int
+    avg_price: float
+    mark: float
+
+
+class PositionCluster(BaseModel):
+    cluster_id: str
+    label: str
+    net_exposure_usd: float
+    limit_usd: float
+    utilization: float = Field(description="abs(exposure)/limit; >=1.0 means at/over limit.")
+    optimizer_target_usd: float = Field(description="Convex-optimizer target for this cluster.")
+    positions: list[ClusterPosition]
+
+
+class PortfolioState(BaseModel):
+    clusters: list[PositionCluster]
+    total_exposure_usd: float
+    risk_budget_usd: float
+
+
+class CommandStateOut(BaseModel):
+    killed: bool
+    killed_at: str | None
+    kill_reason: str | None
+    paused_tickers: dict[str, str] = Field(description="ticker -> UTC ISO time it was paused.")
+    widen_factor: float
+
+
+class CommandResult(BaseModel):
+    accepted: bool
+    already: bool = Field(description="True when idempotence made this a no-op (no new ledger entry).")
+    ledger_seq: int | None = Field(description="Ledger seq of the appended command entry, if one was written.")
+    state: CommandStateOut
+
+
+class KillRequest(BaseModel):
+    reason: str = Field(min_length=3, description="Ledgered verbatim; 'why' is part of the audit trail.")
+
+
+class PauseResumeRequest(BaseModel):
+    reason: str | None = None
+
+
+class WidenRequest(BaseModel):
+    factor: float = Field(description="Spread multiplier; clamped server-side to [1.0, 3.0].")

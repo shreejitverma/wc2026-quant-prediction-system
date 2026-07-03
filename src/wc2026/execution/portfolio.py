@@ -36,11 +36,17 @@ class PortfolioOptimizer:
         
         # Problem
         prob = cp.Problem(objective, constraints)
-        
-        # Solve using OSQP or SCS
-        prob.solve(solver=cp.OSQP)
-        
+
+        # The variance cap quad_form(w, cov) <= budget is a quadratic
+        # CONSTRAINT (QCQP), which OSQP (a QP solver) structurally cannot
+        # handle - it raised SolverError on every call. Clarabel is cvxpy's
+        # bundled conic solver and handles QCQP natively; SCS is the fallback.
+        try:
+            prob.solve(solver=cp.CLARABEL)
+        except cp.error.SolverError:
+            prob.solve(solver=cp.SCS)
+
         if w.value is None:
             return np.zeros(n_assets)
-            
+
         return w.value

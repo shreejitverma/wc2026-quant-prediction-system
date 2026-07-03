@@ -26,6 +26,108 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/commands/kill-switch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Kill Switch */
+        post: operations["post_kill_switch_api_v1_commands_kill_switch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/commands/quoting/widen-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Widen */
+        post: operations["post_widen_api_v1_commands_quoting_widen_all_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/commands/quoting/{ticker}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Pause */
+        post: operations["post_pause_api_v1_commands_quoting__ticker__pause_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/commands/quoting/{ticker}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Resume */
+        post: operations["post_resume_api_v1_commands_quoting__ticker__resume_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/commands/state": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Command State */
+        get: operations["get_command_state_api_v1_commands_state_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/{ticker}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Console */
+        get: operations["get_console_api_v1_console__ticker__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health": {
         parameters: {
             query?: never;
@@ -137,6 +239,27 @@ export interface paths {
         };
         /** Get Opportunities */
         get: operations["get_opportunities_api_v1_opportunities_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portfolio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Portfolio
+         * @description Clusters follow the fixtures (positions in the same match co-move);
+         *     targets come from the REAL convex optimizer on a mock covariance.
+         */
+        get: operations["get_portfolio_api_v1_portfolio_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -257,12 +380,84 @@ export interface components {
             /** Note */
             note: string;
         };
+        /** BookLevel */
+        BookLevel: {
+            /** Price */
+            price: number;
+            /** Size */
+            size: number;
+        };
+        /** ClusterPosition */
+        ClusterPosition: {
+            /** Avg Price */
+            avg_price: number;
+            /** Mark */
+            mark: number;
+            /** Qty */
+            qty: number;
+            /** Ticker */
+            ticker: string;
+        };
         /** CoherenceReport */
         CoherenceReport: {
             /** Cross Venue */
             cross_venue: components["schemas"]["CrossVenueRow"][];
             /** Internal */
             internal: components["schemas"]["InternalViolation"][];
+        };
+        /** CommandResult */
+        CommandResult: {
+            /** Accepted */
+            accepted: boolean;
+            /**
+             * Already
+             * @description True when idempotence made this a no-op (no new ledger entry).
+             */
+            already: boolean;
+            /**
+             * Ledger Seq
+             * @description Ledger seq of the appended command entry, if one was written.
+             */
+            ledger_seq: number | null;
+            state: components["schemas"]["CommandStateOut"];
+        };
+        /** CommandStateOut */
+        CommandStateOut: {
+            /** Kill Reason */
+            kill_reason: string | null;
+            /** Killed */
+            killed: boolean;
+            /** Killed At */
+            killed_at: string | null;
+            /**
+             * Paused Tickers
+             * @description ticker -> UTC ISO time it was paused.
+             */
+            paused_tickers: {
+                [key: string]: string;
+            };
+            /** Widen Factor */
+            widen_factor: number;
+        };
+        /** ConsoleState */
+        ConsoleState: {
+            /** Book As Of */
+            book_as_of: string;
+            /** Book Asks */
+            book_asks: components["schemas"]["BookLevel"][];
+            /** Book Bids */
+            book_bids: components["schemas"]["BookLevel"][];
+            /** Fills */
+            fills: components["schemas"]["Fill"][];
+            my_quotes: components["schemas"]["MyQuotes"];
+            quote_inputs: components["schemas"]["QuoteInputs"];
+            /**
+             * Quoting Status
+             * @enum {string}
+             */
+            quoting_status: "active" | "paused" | "killed";
+            /** Ticker */
+            ticker: string;
         };
         /** CrossVenueRow */
         CrossVenueRow: {
@@ -283,6 +478,21 @@ export interface components {
         /** Envelope[CoherenceReport] */
         Envelope_CoherenceReport_: {
             data: components["schemas"]["CoherenceReport"];
+            provenance: components["schemas"]["Provenance"];
+        };
+        /** Envelope[CommandResult] */
+        Envelope_CommandResult_: {
+            data: components["schemas"]["CommandResult"];
+            provenance: components["schemas"]["Provenance"];
+        };
+        /** Envelope[CommandStateOut] */
+        Envelope_CommandStateOut_: {
+            data: components["schemas"]["CommandStateOut"];
+            provenance: components["schemas"]["Provenance"];
+        };
+        /** Envelope[ConsoleState] */
+        Envelope_ConsoleState_: {
+            data: components["schemas"]["ConsoleState"];
             provenance: components["schemas"]["Provenance"];
         };
         /** Envelope[HealthData] */
@@ -308,6 +518,11 @@ export interface components {
         /** Envelope[MatchTimeline] */
         Envelope_MatchTimeline_: {
             data: components["schemas"]["MatchTimeline"];
+            provenance: components["schemas"]["Provenance"];
+        };
+        /** Envelope[PortfolioState] */
+        Envelope_PortfolioState_: {
+            data: components["schemas"]["PortfolioState"];
             provenance: components["schemas"]["Provenance"];
         };
         /** Envelope[RunOut] */
@@ -362,6 +577,27 @@ export interface components {
             /** Value After */
             value_after: number;
         };
+        /** Fill */
+        Fill: {
+            /**
+             * Context
+             * @description What was happening when this fill occurred.
+             */
+            context: string;
+            /** Price */
+            price: number;
+            /**
+             * Side
+             * @enum {string}
+             */
+            side: "buy" | "sell";
+            /** Size */
+            size: number;
+            /** Ticker */
+            ticker: string;
+            /** Ts Utc */
+            ts_utc: string;
+        };
         /** GroupTable */
         GroupTable: {
             /** Group */
@@ -384,6 +620,12 @@ export interface components {
             data_status: "ok" | "stale" | "empty";
             /** Kill Switch Enabled */
             kill_switch_enabled: boolean;
+            /**
+             * Killed
+             * @description True when a kill command is in the ledger; re-arming is a CLI act.
+             * @default false
+             */
+            killed: boolean;
             /** Last Ledger Ts Utc */
             last_ledger_ts_utc: string | null;
             /** Ledger Entries */
@@ -419,6 +661,14 @@ export interface components {
              * @enum {string}
              */
             safest_class: "my-info" | "their-info" | "settlement-trap" | "incoherence";
+        };
+        /** KillRequest */
+        KillRequest: {
+            /**
+             * Reason
+             * @description Ledgered verbatim; 'why' is part of the audit trail.
+             */
+            reason: string;
         };
         /** LedgerEntry */
         LedgerEntry: {
@@ -661,6 +911,57 @@ export interface components {
              */
             weight: number | null;
         };
+        /** MyQuotes */
+        MyQuotes: {
+            /**
+             * Active
+             * @description False when paused or killed - quotes pulled.
+             */
+            active: boolean;
+            /** Ask */
+            ask: number;
+            /** Bid */
+            bid: number;
+            /** Size */
+            size: number;
+        };
+        /** PauseResumeRequest */
+        PauseResumeRequest: {
+            /** Reason */
+            reason?: string | null;
+        };
+        /** PortfolioState */
+        PortfolioState: {
+            /** Clusters */
+            clusters: components["schemas"]["PositionCluster"][];
+            /** Risk Budget Usd */
+            risk_budget_usd: number;
+            /** Total Exposure Usd */
+            total_exposure_usd: number;
+        };
+        /** PositionCluster */
+        PositionCluster: {
+            /** Cluster Id */
+            cluster_id: string;
+            /** Label */
+            label: string;
+            /** Limit Usd */
+            limit_usd: number;
+            /** Net Exposure Usd */
+            net_exposure_usd: number;
+            /**
+             * Optimizer Target Usd
+             * @description Convex-optimizer target for this cluster.
+             */
+            optimizer_target_usd: number;
+            /** Positions */
+            positions: components["schemas"]["ClusterPosition"][];
+            /**
+             * Utilization
+             * @description abs(exposure)/limit; >=1.0 means at/over limit.
+             */
+            utilization: number;
+        };
         /**
          * ProbWithBand
          * @description A probability may not travel without its uncertainty (ADR-0013).
@@ -706,6 +1007,43 @@ export interface components {
              * @enum {string}
              */
             source: "real" | "mock";
+        };
+        /**
+         * QuoteInputs
+         * @description The quote formula's INPUTS, not just its output (Avellaneda-Stoikov via
+         *     execution.quoting). The operator must see why the spread/skew is what it is.
+         */
+        QuoteInputs: {
+            /** Ask */
+            ask: number;
+            /** Bid */
+            bid: number;
+            /** Fair Value */
+            fair_value: number;
+            /** Fee Floor */
+            fee_floor: number;
+            /** Gamma */
+            gamma: number;
+            /** Inventory */
+            inventory: number;
+            /**
+             * News State
+             * @enum {string}
+             */
+            news_state: "normal" | "lineup-window" | "post-goal" | "quarantined";
+            /**
+             * Skew
+             * @description Reservation-price shift vs fair value (inventory shade).
+             */
+            skew: number;
+            /** Spread */
+            spread: number;
+            /** Time To Settlement Days */
+            time_to_settlement_days: number;
+            /** Variance */
+            variance: number;
+            /** Widen Factor */
+            widen_factor: number;
         };
         /**
          * RunOut
@@ -922,6 +1260,14 @@ export interface components {
             /** Polymarket Enabled */
             polymarket_enabled: boolean;
         };
+        /** WidenRequest */
+        WidenRequest: {
+            /**
+             * Factor
+             * @description Spread multiplier; clamped server-side to [1.0, 3.0].
+             */
+            factor: number;
+        };
         /** WinnerProb */
         WinnerProb: {
             /** @description Wilson 95% interval from draw counts. */
@@ -954,6 +1300,193 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_CoherenceReport_"];
+                };
+            };
+        };
+    };
+    post_kill_switch_api_v1_commands_kill_switch_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KillRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_CommandResult_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_widen_api_v1_commands_quoting_widen_all_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WidenRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_CommandResult_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_pause_api_v1_commands_quoting__ticker__pause_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PauseResumeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_CommandResult_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_resume_api_v1_commands_quoting__ticker__resume_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PauseResumeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_CommandResult_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_command_state_api_v1_commands_state_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_CommandStateOut_"];
+                };
+            };
+        };
+    };
+    get_console_api_v1_console__ticker__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ConsoleState_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -1131,6 +1664,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_list_MarketOpportunity__"];
+                };
+            };
+        };
+    };
+    get_portfolio_api_v1_portfolio_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_PortfolioState_"];
                 };
             };
         };

@@ -1,7 +1,7 @@
 import { Bell, Search } from "lucide-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
-import { fetchHealth, type Envelope, type HealthData } from "@/lib/api";
+import { commandKill, fetchHealth, type Envelope, type HealthData } from "@/lib/api";
 import { useTopic, useWsStatus } from "@/lib/wsHooks";
 import { FreshnessDot } from "@/components/primitives/FreshnessDot";
 import { ConfirmTyped } from "@/components/primitives/ConfirmTyped";
@@ -32,6 +32,17 @@ export function Topbar() {
 
   const h = health.data?.data;
   const asOf = health.data?.provenance.data_as_of;
+
+  // The one write the whole shell owns. Ledgered by the backend; idempotent;
+  // there is deliberately no un-kill mutation anywhere in the UI.
+  const kill = useMutation({
+    mutationFn: () => commandKill("operator kill via terminal (Shift-Cmd-K)"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["health"] });
+      queryClient.invalidateQueries({ queryKey: ["console"] });
+      queryClient.invalidateQueries({ queryKey: ["commands"] });
+    },
+  });
 
   return (
     <div className="flex h-14 items-center border-b px-4 lg:px-6 bg-background">
@@ -93,23 +104,32 @@ export function Topbar() {
           <Bell className="h-4 w-4" />
         </button>
 
-        <button
-          onClick={() => setKillDialogOpen(true)}
-          title="Kill switch (⇧⌘K)"
-          className="rounded-md border border-status-critical/50 px-3 py-1.5 font-mono text-xs font-bold text-status-critical hover:bg-status-critical/10"
-        >
-          KILL
-        </button>
+        {h?.killed ? (
+          <span
+            className="rounded-md border border-status-critical bg-status-critical/15 px-3 py-1.5 font-mono text-xs font-bold text-status-critical"
+            title="Kill switch fired; re-arming is a deliberate CLI act."
+          >
+            ● KILLED
+          </span>
+        ) : (
+          <button
+            onClick={() => setKillDialogOpen(true)}
+            title="Kill switch (⇧⌘K)"
+            className="rounded-md border border-status-critical/50 px-3 py-1.5 font-mono text-xs font-bold text-status-critical hover:bg-status-critical/10"
+          >
+            KILL
+          </button>
+        )}
       </div>
 
       <ConfirmTyped
         open={killDialogOpen}
         onOpenChange={setKillDialogOpen}
         title="Kill switch"
-        description="Pull all quotes on all venues and halt the quoting engine. This writes a kill command to the ledger via the backend."
+        description="Pull all quotes on all venues and halt the quoting engine. The command is ledgered by the backend; there is NO un-kill in this UI - re-arming is a deliberate CLI act."
         phrase="KILL ALL QUOTING"
         confirmLabel="Kill"
-        disabledReason="Not wired yet: the fenced command endpoints land in Phase 4 with the MM console. Nothing is quoting today (paper mode, no execution loop), so there is nothing to kill."
+        onConfirm={() => kill.mutate()}
       />
     </div>
   );

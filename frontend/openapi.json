@@ -80,6 +80,52 @@
         "title": "Attribution",
         "type": "object"
       },
+      "BookLevel": {
+        "properties": {
+          "price": {
+            "title": "Price",
+            "type": "number"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "price",
+          "size"
+        ],
+        "title": "BookLevel",
+        "type": "object"
+      },
+      "ClusterPosition": {
+        "properties": {
+          "avg_price": {
+            "title": "Avg Price",
+            "type": "number"
+          },
+          "mark": {
+            "title": "Mark",
+            "type": "number"
+          },
+          "qty": {
+            "title": "Qty",
+            "type": "integer"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker",
+          "qty",
+          "avg_price",
+          "mark"
+        ],
+        "title": "ClusterPosition",
+        "type": "object"
+      },
       "CoherenceReport": {
         "properties": {
           "cross_venue": {
@@ -102,6 +148,153 @@
           "internal"
         ],
         "title": "CoherenceReport",
+        "type": "object"
+      },
+      "CommandResult": {
+        "properties": {
+          "accepted": {
+            "title": "Accepted",
+            "type": "boolean"
+          },
+          "already": {
+            "description": "True when idempotence made this a no-op (no new ledger entry).",
+            "title": "Already",
+            "type": "boolean"
+          },
+          "ledger_seq": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Ledger seq of the appended command entry, if one was written.",
+            "title": "Ledger Seq"
+          },
+          "state": {
+            "$ref": "#/components/schemas/CommandStateOut"
+          }
+        },
+        "required": [
+          "accepted",
+          "already",
+          "ledger_seq",
+          "state"
+        ],
+        "title": "CommandResult",
+        "type": "object"
+      },
+      "CommandStateOut": {
+        "properties": {
+          "kill_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kill Reason"
+          },
+          "killed": {
+            "title": "Killed",
+            "type": "boolean"
+          },
+          "killed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Killed At"
+          },
+          "paused_tickers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "ticker -> UTC ISO time it was paused.",
+            "title": "Paused Tickers",
+            "type": "object"
+          },
+          "widen_factor": {
+            "title": "Widen Factor",
+            "type": "number"
+          }
+        },
+        "required": [
+          "killed",
+          "killed_at",
+          "kill_reason",
+          "paused_tickers",
+          "widen_factor"
+        ],
+        "title": "CommandStateOut",
+        "type": "object"
+      },
+      "ConsoleState": {
+        "properties": {
+          "book_as_of": {
+            "title": "Book As Of",
+            "type": "string"
+          },
+          "book_asks": {
+            "items": {
+              "$ref": "#/components/schemas/BookLevel"
+            },
+            "title": "Book Asks",
+            "type": "array"
+          },
+          "book_bids": {
+            "items": {
+              "$ref": "#/components/schemas/BookLevel"
+            },
+            "title": "Book Bids",
+            "type": "array"
+          },
+          "fills": {
+            "items": {
+              "$ref": "#/components/schemas/Fill"
+            },
+            "title": "Fills",
+            "type": "array"
+          },
+          "my_quotes": {
+            "$ref": "#/components/schemas/MyQuotes"
+          },
+          "quote_inputs": {
+            "$ref": "#/components/schemas/QuoteInputs"
+          },
+          "quoting_status": {
+            "enum": [
+              "active",
+              "paused",
+              "killed"
+            ],
+            "title": "Quoting Status",
+            "type": "string"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker",
+          "book_bids",
+          "book_asks",
+          "book_as_of",
+          "my_quotes",
+          "quote_inputs",
+          "quoting_status",
+          "fills"
+        ],
+        "title": "ConsoleState",
         "type": "object"
       },
       "CrossVenueRow": {
@@ -173,6 +366,54 @@
           "provenance"
         ],
         "title": "Envelope[CoherenceReport]",
+        "type": "object"
+      },
+      "Envelope_CommandResult_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CommandResult"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          }
+        },
+        "required": [
+          "data",
+          "provenance"
+        ],
+        "title": "Envelope[CommandResult]",
+        "type": "object"
+      },
+      "Envelope_CommandStateOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CommandStateOut"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          }
+        },
+        "required": [
+          "data",
+          "provenance"
+        ],
+        "title": "Envelope[CommandStateOut]",
+        "type": "object"
+      },
+      "Envelope_ConsoleState_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ConsoleState"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          }
+        },
+        "required": [
+          "data",
+          "provenance"
+        ],
+        "title": "Envelope[ConsoleState]",
         "type": "object"
       },
       "Envelope_HealthData_": {
@@ -253,6 +494,22 @@
           "provenance"
         ],
         "title": "Envelope[MatchTimeline]",
+        "type": "object"
+      },
+      "Envelope_PortfolioState_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/PortfolioState"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          }
+        },
+        "required": [
+          "data",
+          "provenance"
+        ],
+        "title": "Envelope[PortfolioState]",
         "type": "object"
       },
       "Envelope_RunOut_": {
@@ -390,6 +647,49 @@
         "title": "FairValueStep",
         "type": "object"
       },
+      "Fill": {
+        "properties": {
+          "context": {
+            "description": "What was happening when this fill occurred.",
+            "title": "Context",
+            "type": "string"
+          },
+          "price": {
+            "title": "Price",
+            "type": "number"
+          },
+          "side": {
+            "enum": [
+              "buy",
+              "sell"
+            ],
+            "title": "Side",
+            "type": "string"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          },
+          "ts_utc": {
+            "title": "Ts Utc",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ts_utc",
+          "ticker",
+          "side",
+          "price",
+          "size",
+          "context"
+        ],
+        "title": "Fill",
+        "type": "object"
+      },
       "GroupTable": {
         "properties": {
           "group": {
@@ -438,6 +738,12 @@
           },
           "kill_switch_enabled": {
             "title": "Kill Switch Enabled",
+            "type": "boolean"
+          },
+          "killed": {
+            "default": false,
+            "description": "True when a kill command is in the ledger; re-arming is a CLI act.",
+            "title": "Killed",
             "type": "boolean"
           },
           "last_ledger_ts_utc": {
@@ -538,6 +844,21 @@
           "safest_class"
         ],
         "title": "InternalViolation",
+        "type": "object"
+      },
+      "KillRequest": {
+        "properties": {
+          "reason": {
+            "description": "Ledgered verbatim; 'why' is part of the audit trail.",
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "KillRequest",
         "type": "object"
       },
       "LedgerEntry": {
@@ -1108,6 +1429,126 @@
         "title": "ModelProbs",
         "type": "object"
       },
+      "MyQuotes": {
+        "properties": {
+          "active": {
+            "description": "False when paused or killed - quotes pulled.",
+            "title": "Active",
+            "type": "boolean"
+          },
+          "ask": {
+            "title": "Ask",
+            "type": "number"
+          },
+          "bid": {
+            "title": "Bid",
+            "type": "number"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "bid",
+          "ask",
+          "size",
+          "active"
+        ],
+        "title": "MyQuotes",
+        "type": "object"
+      },
+      "PauseResumeRequest": {
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "title": "PauseResumeRequest",
+        "type": "object"
+      },
+      "PortfolioState": {
+        "properties": {
+          "clusters": {
+            "items": {
+              "$ref": "#/components/schemas/PositionCluster"
+            },
+            "title": "Clusters",
+            "type": "array"
+          },
+          "risk_budget_usd": {
+            "title": "Risk Budget Usd",
+            "type": "number"
+          },
+          "total_exposure_usd": {
+            "title": "Total Exposure Usd",
+            "type": "number"
+          }
+        },
+        "required": [
+          "clusters",
+          "total_exposure_usd",
+          "risk_budget_usd"
+        ],
+        "title": "PortfolioState",
+        "type": "object"
+      },
+      "PositionCluster": {
+        "properties": {
+          "cluster_id": {
+            "title": "Cluster Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "limit_usd": {
+            "title": "Limit Usd",
+            "type": "number"
+          },
+          "net_exposure_usd": {
+            "title": "Net Exposure Usd",
+            "type": "number"
+          },
+          "optimizer_target_usd": {
+            "description": "Convex-optimizer target for this cluster.",
+            "title": "Optimizer Target Usd",
+            "type": "number"
+          },
+          "positions": {
+            "items": {
+              "$ref": "#/components/schemas/ClusterPosition"
+            },
+            "title": "Positions",
+            "type": "array"
+          },
+          "utilization": {
+            "description": "abs(exposure)/limit; >=1.0 means at/over limit.",
+            "title": "Utilization",
+            "type": "number"
+          }
+        },
+        "required": [
+          "cluster_id",
+          "label",
+          "net_exposure_usd",
+          "limit_usd",
+          "utilization",
+          "optimizer_target_usd",
+          "positions"
+        ],
+        "title": "PositionCluster",
+        "type": "object"
+      },
       "ProbWithBand": {
         "description": "A probability may not travel without its uncertainty (ADR-0013).",
         "properties": {
@@ -1196,6 +1637,82 @@
           "config_hash"
         ],
         "title": "Provenance",
+        "type": "object"
+      },
+      "QuoteInputs": {
+        "description": "The quote formula's INPUTS, not just its output (Avellaneda-Stoikov via\nexecution.quoting). The operator must see why the spread/skew is what it is.",
+        "properties": {
+          "ask": {
+            "title": "Ask",
+            "type": "number"
+          },
+          "bid": {
+            "title": "Bid",
+            "type": "number"
+          },
+          "fair_value": {
+            "title": "Fair Value",
+            "type": "number"
+          },
+          "fee_floor": {
+            "title": "Fee Floor",
+            "type": "number"
+          },
+          "gamma": {
+            "title": "Gamma",
+            "type": "number"
+          },
+          "inventory": {
+            "title": "Inventory",
+            "type": "number"
+          },
+          "news_state": {
+            "enum": [
+              "normal",
+              "lineup-window",
+              "post-goal",
+              "quarantined"
+            ],
+            "title": "News State",
+            "type": "string"
+          },
+          "skew": {
+            "description": "Reservation-price shift vs fair value (inventory shade).",
+            "title": "Skew",
+            "type": "number"
+          },
+          "spread": {
+            "title": "Spread",
+            "type": "number"
+          },
+          "time_to_settlement_days": {
+            "title": "Time To Settlement Days",
+            "type": "number"
+          },
+          "variance": {
+            "title": "Variance",
+            "type": "number"
+          },
+          "widen_factor": {
+            "title": "Widen Factor",
+            "type": "number"
+          }
+        },
+        "required": [
+          "fair_value",
+          "variance",
+          "inventory",
+          "time_to_settlement_days",
+          "gamma",
+          "fee_floor",
+          "widen_factor",
+          "news_state",
+          "bid",
+          "ask",
+          "spread",
+          "skew"
+        ],
+        "title": "QuoteInputs",
         "type": "object"
       },
       "RunOut": {
@@ -1749,6 +2266,20 @@
         "title": "VenueStatus",
         "type": "object"
       },
+      "WidenRequest": {
+        "properties": {
+          "factor": {
+            "description": "Spread multiplier; clamped server-side to [1.0, 3.0].",
+            "title": "Factor",
+            "type": "number"
+          }
+        },
+        "required": [
+          "factor"
+        ],
+        "title": "WidenRequest",
+        "type": "object"
+      },
       "WinnerProb": {
         "properties": {
           "p": {
@@ -1792,6 +2323,237 @@
           }
         },
         "summary": "Get Coherence"
+      }
+    },
+    "/api/v1/commands/kill-switch": {
+      "post": {
+        "operationId": "post_kill_switch_api_v1_commands_kill_switch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KillRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_CommandResult_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Kill Switch"
+      }
+    },
+    "/api/v1/commands/quoting/widen-all": {
+      "post": {
+        "operationId": "post_widen_api_v1_commands_quoting_widen_all_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WidenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_CommandResult_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Widen"
+      }
+    },
+    "/api/v1/commands/quoting/{ticker}/pause": {
+      "post": {
+        "operationId": "post_pause_api_v1_commands_quoting__ticker__pause_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "title": "Ticker",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PauseResumeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_CommandResult_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Pause"
+      }
+    },
+    "/api/v1/commands/quoting/{ticker}/resume": {
+      "post": {
+        "operationId": "post_resume_api_v1_commands_quoting__ticker__resume_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "title": "Ticker",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PauseResumeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_CommandResult_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Resume"
+      }
+    },
+    "/api/v1/commands/state": {
+      "get": {
+        "operationId": "get_command_state_api_v1_commands_state_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_CommandStateOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Command State"
+      }
+    },
+    "/api/v1/console/{ticker}": {
+      "get": {
+        "operationId": "get_console_api_v1_console__ticker__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "title": "Ticker",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ConsoleState_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Console"
       }
     },
     "/api/v1/health": {
@@ -2014,6 +2776,25 @@
           }
         },
         "summary": "Get Opportunities"
+      }
+    },
+    "/api/v1/portfolio": {
+      "get": {
+        "description": "Clusters follow the fixtures (positions in the same match co-move);\ntargets come from the REAL convex optimizer on a mock covariance.",
+        "operationId": "get_portfolio_api_v1_portfolio_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_PortfolioState_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Portfolio"
       }
     },
     "/api/v1/runs": {

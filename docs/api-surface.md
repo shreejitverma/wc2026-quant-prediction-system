@@ -187,13 +187,37 @@ Joint probability of 1–4 `(team, outcome)` events, COUNTED from the draws (nev
 
 ---
 
+### MM Console & Fenced Commands (Phase 4)
+
+#### `GET /api/v1/console/{ticker}`
+**Status**: 🟡 **built, mock book/fills; REAL quote math** — Avellaneda-Stoikov via `execution.quoting` with the ledgered widen factor and a fee floor; the response carries the formula's INPUTS (fair value, variance, inventory, γ, T), not just bid/ask.
+
+#### `GET /api/v1/portfolio`
+**Status**: 🟡 **built, mock positions; REAL optimizer** — clusters follow match correlation; targets from `execution.portfolio` (convex, Clarabel).
+
+#### `POST /api/v1/commands/*` — the UI's ONLY write path
+**Status**: ✅ **real** (ledger writes are real even while quoting is mock — operator intent is real).
+
+Command state is DERIVED FROM THE LEDGER (`kind="command"` entries; state = fold), never process memory: restart-safe, tamper-evident, one source of truth.
+
+| Command | Fence (server-side, authoritative) |
+|---|---|
+| `POST /commands/kill-switch` | Idempotent (no duplicate entries); **no un-kill endpoint** — re-arming is a CLI act |
+| `POST /commands/quoting/{ticker}/pause` | Always allowed (risk-reducing is never blocked); idempotent |
+| `POST /commands/quoting/{ticker}/resume` | **409 while killed**; refused outside paper mode |
+| `POST /commands/quoting/widen-all` | Factor clamped to [1.0, 3.0] |
+| `GET /commands/state` | Derived state: killed, paused tickers, widen factor |
+
+`GET /health` now carries `killed` so the status strip can scream terminal-wide.
+
+---
+
 ## Planned Endpoints (Future Phases)
 
 | Endpoint | Description | Phase |
 |----------|-------------|-------|
 | `GET /api/v1/contracts/{id}/fair-value` | Full fair-value decomposition waterfall | 3 |
 | `GET /api/v1/books/{ticker}` | Live orderbook depth + recent history | 3 |
-| `GET /api/v1/portfolio` | Position view with correlation clusters and limit utilization | 4 |
 | `GET /api/v1/eval/*` | CLV measurement, calibration curves, model race | 5 |
 | `GET /api/v1/prereg` | Pre-registration status for active experiments | 5 |
 | `GET /api/v1/ops/*` | Pipeline freshness and cron history | 6 |

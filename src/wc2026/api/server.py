@@ -28,8 +28,19 @@ from typing import Annotated
 from fastapi import Depends, FastAPI, HTTPException, Query, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 
+from ..execution.portfolio import PortfolioOptimizer
+from ..execution.quoting import QuotingEngine
 from ..ledger import AppendOnlyLedger
 from ..time_utils import from_iso, to_iso, utc_now
+from .commands import (
+    CommandRejected,
+    CommandState,
+    command_kill,
+    command_pause,
+    command_resume,
+    command_widen,
+    read_command_state,
+)
 from .deps import ApiState, get_state
 from .mock_tournament import (
     GROUPS,
@@ -46,13 +57,20 @@ from .provenance import make_provenance
 from .schemas import (
     AdvancementRow,
     Attribution,
+    BookLevel,
+    ClusterPosition,
     CoherenceReport,
+    CommandResult,
+    CommandStateOut,
+    ConsoleState,
     CrossVenueRow,
     Envelope,
     FairValueStep,
+    Fill,
     GroupTable,
     HealthData,
     InternalViolation,
+    KillRequest,
     LedgerEntry,
     LedgerPage,
     LedgerVerification,
@@ -63,7 +81,12 @@ from .schemas import (
     MatchPrediction,
     MatchTimeline,
     ModelProbs,
+    MyQuotes,
+    PauseResumeRequest,
+    PortfolioState,
+    PositionCluster,
     ProbWithBand,
+    QuoteInputs,
     RunOut,
     RunsPage,
     SettlementMapping,
@@ -76,6 +99,7 @@ from .schemas import (
     TournamentState,
     VenueInfo,
     VenueStatus,
+    WidenRequest,
     WinnerProb,
 )
 from .ws import serve_ws
@@ -128,6 +152,7 @@ def build_health_envelope(state: ApiState) -> Envelope[HealthData]:
         max_data_staleness_seconds=max_stale,
         min_edge=state.cfg.risk.min_edge,
         kill_switch_enabled=state.cfg.kill_switch.enabled,
+        killed=read_command_state(state).killed,
         venues=VenueStatus(
             kalshi_enabled=state.cfg.venues.kalshi_enabled,
             polymarket_enabled=state.cfg.venues.polymarket_enabled,
@@ -772,5 +797,217 @@ def sim_query(req: SimQueryRequest, state: StateDep) -> Envelope[SimQueryResult]
         n_hits=hits,
         independent_product=product,
         dependence_ratio=(p / product) if product > 0 else None,
+    )
+    return Envelope(data=data, provenance=make_provenance(state.cfg, source="mock"))
+
+
+# --- Fenced commands (Phase 4): the UI's ONLY write path. REAL ledger writes;
+# state is a fold over command entries (api/commands.py) -------------------
+
+
+def _command_state_out(s: CommandState) -> CommandStateOut:
+    return CommandStateOut(
+        killed=s.killed,
+        killed_at=s.killed_at,
+        kill_reason=s.kill_reason,
+        paused_tickers=s.paused_tickers,
+        widen_factor=s.widen_factor,
+    )
+
+
+def _command_envelope(state: ApiState, result: CommandState, seq: int | None, already: bool) -> Envelope[CommandResult]:
+    data = CommandResult(accepted=True, already=already, ledger_seq=seq, state=_command_state_out(result))
+    return Envelope(data=data, provenance=make_provenance(state.cfg, source="real"))
+
+
+@app.get("/api/v1/commands/state", response_model=Envelope[CommandStateOut])
+def get_command_state(state: StateDep) -> Envelope[CommandStateOut]:
+    s = read_command_state(state)
+    return Envelope(data=_command_state_out(s), provenance=make_provenance(state.cfg, source="real"))
+
+
+@app.post("/api/v1/commands/kill-switch", response_model=Envelope[CommandResult])
+def post_kill_switch(req: KillRequest, state: StateDep) -> Envelope[CommandResult]:
+    s, seq, already = command_kill(state, req.reason)
+    return _command_envelope(state, s, seq, already)
+
+
+@app.post("/api/v1/commands/quoting/{ticker}/pause", response_model=Envelope[CommandResult])
+def post_pause(ticker: str, req: PauseResumeRequest, state: StateDep) -> Envelope[CommandResult]:
+    s, seq = command_pause(state, ticker, req.reason)
+    return _command_envelope(state, s, seq, already=seq is None)
+
+
+@app.post("/api/v1/commands/quoting/{ticker}/resume", response_model=Envelope[CommandResult])
+def post_resume(ticker: str, req: PauseResumeRequest, state: StateDep) -> Envelope[CommandResult]:
+    try:
+        s, seq = command_resume(state, ticker, req.reason)
+    except CommandRejected as exc:
+        raise HTTPException(status_code=409, detail={"code": exc.code, "detail": exc.detail}) from exc
+    return _command_envelope(state, s, seq, already=seq is None)
+
+
+@app.post("/api/v1/commands/quoting/widen-all", response_model=Envelope[CommandResult])
+def post_widen(req: WidenRequest, state: StateDep) -> Envelope[CommandResult]:
+    s, seq = command_widen(state, req.factor)
+    return _command_envelope(state, s, seq, already=False)
+
+
+# --- MM Console (MOCK book/fills; REAL quote math via execution.quoting;
+# REAL command state) --------------------------------------------------------
+
+
+def _opportunity_by_ticker(state: ApiState, ticker: str) -> MarketOpportunity:
+    for row in _mock_opportunity_rows(state):
+        if row.ticker == ticker:
+            return row
+    raise HTTPException(status_code=404, detail={"code": "unknown_ticker", "ticker": ticker})
+
+
+def _news_state(state: ApiState, opp: MarketOpportunity) -> str:
+    if not opp.settlement.confirmed:
+        return "quarantined"
+    for i, fx in enumerate(_MOCK_FIXTURES):
+        if fx["home"][:3].upper() in opp.ticker:
+            core = _mock_match_core(state, i)
+            if core["fixture"]["lineup_confirmed"] and fx["kickoff_in_h"] <= 12:
+                return "lineup-window"
+    return "normal"
+
+
+@app.get("/api/v1/console/{ticker}", response_model=Envelope[ConsoleState])
+def get_console(ticker: str, state: StateDep) -> Envelope[ConsoleState]:
+    opp = _opportunity_by_ticker(state, ticker)
+    cmd = read_command_state(state)
+    rng = random.Random(hash((state.cfg.seed, "console", ticker)) & 0xFFFFFFFF)
+
+    fair = opp.fair.p
+    variance = fair * (1 - fair)
+    inventory_contracts = rng.randrange(-200, 300, 10)
+    # A-S inputs must be scaled for a [0,1] binary asset: inventory in
+    # 100-lots (else gamma*var*inv*T shifts the reservation price off the
+    # price axis entirely) and an arrival rate that yields a centi-scale
+    # spread. gamma=0.5, k=30/day -> base spread ~7c; the engine's defaults
+    # (gamma=0.1, k=1.5) produce a 1.29 spread and clamp to nonsense.
+    inventory = inventory_contracts / 100.0
+    t_days = 0.25
+    gamma = 0.5
+    fee_floor = 0.012
+
+    # REAL quote math (Avellaneda-Stoikov) on the mock inputs, with the
+    # ledgered widen factor applied and the fee floor enforced.
+    engine = QuotingEngine(risk_aversion=gamma, arrival_rate=30.0)
+    raw_bid, raw_ask = engine.compute_quotes(fair, inventory, variance, t_days)
+    half = max((raw_ask - raw_bid) / 2 * cmd.widen_factor, fee_floor / 2)
+    r_mid = (raw_bid + raw_ask) / 2
+    bid, ask = max(0.01, r_mid - half), min(0.99, r_mid + half)
+
+    paused = ticker in cmd.paused_tickers
+    status = "killed" if cmd.killed else ("paused" if paused else "active")
+    active = status == "active"
+
+    # Mock ladder around the venue mid, deterministic per ticker.
+    mid = (opp.best_bid + opp.best_ask) / 2
+    bids = [
+        BookLevel(price=round(mid - 0.01 * (k + 1), 3), size=rng.randrange(50, 1500, 10))
+        for k in range(5)
+    ]
+    asks = [
+        BookLevel(price=round(mid + 0.01 * (k + 1), 3), size=rng.randrange(50, 1500, 10))
+        for k in range(5)
+    ]
+
+    contexts = ["normal book", "lineup window open", "goal in parallel match", "spread widened"]
+    now_s = utc_now().timestamp()
+    fills = [
+        Fill(
+            ts_utc=to_iso(datetime.fromtimestamp(now_s - k * 1800, tz=UTC)),
+            ticker=ticker,
+            side=rng.choice(["buy", "sell"]),
+            price=round(mid + rng.uniform(-0.02, 0.02), 3),
+            size=rng.randrange(10, 200, 10),
+            context=rng.choice(contexts),
+        )
+        for k in range(1, 5)
+    ]
+
+    data = ConsoleState(
+        ticker=ticker,
+        book_bids=bids,
+        book_asks=asks,
+        book_as_of=to_iso(utc_now()),
+        my_quotes=MyQuotes(bid=round(bid, 3), ask=round(ask, 3), size=200, active=active),
+        quote_inputs=QuoteInputs(
+            fair_value=fair,
+            variance=variance,
+            inventory=float(inventory_contracts),
+            time_to_settlement_days=t_days,
+            gamma=gamma,
+            fee_floor=fee_floor,
+            widen_factor=cmd.widen_factor,
+            news_state=_news_state(state, opp),  # type: ignore[arg-type]
+            bid=round(bid, 3),
+            ask=round(ask, 3),
+            spread=round(ask - bid, 4),
+            skew=round(r_mid - fair, 4),
+        ),
+        quoting_status=status,  # type: ignore[arg-type]
+        fills=fills,
+    )
+    return Envelope(data=data, provenance=make_provenance(state.cfg, source="mock"))
+
+
+@app.get("/api/v1/portfolio", response_model=Envelope[PortfolioState])
+def get_portfolio(state: StateDep) -> Envelope[PortfolioState]:
+    """Clusters follow the fixtures (positions in the same match co-move);
+    targets come from the REAL convex optimizer on a mock covariance."""
+    import numpy as np
+
+    rows = _mock_opportunity_rows(state)
+    rng = random.Random(state.cfg.seed + 99)
+    clusters: list[PositionCluster] = []
+    edges, exposures = [], []
+    for i, fx in enumerate(_MOCK_FIXTURES):
+        tickers = [r for r in rows if fx["home"][:3].upper() in r.ticker]
+        positions = []
+        net = 0.0
+        for r in tickers:
+            qty = rng.randrange(-150, 250, 10)
+            mark = (r.best_bid + r.best_ask) / 2
+            positions.append(
+                ClusterPosition(ticker=r.ticker, qty=qty, avg_price=round(mark - 0.01, 3), mark=round(mark, 3))
+            )
+            net += qty * mark
+        edges.append(abs(sum(r.edge_risk_adjusted for r in tickers)) / max(1, len(tickers)))
+        exposures.append(net)
+        # Serve internally consistent numbers: utilization derives from the
+        # SAME (cent-rounded) exposure the row displays, or the two fields
+        # disagree in the client's arithmetic.
+        net = round(net, 2)
+        clusters.append(
+            PositionCluster(
+                cluster_id=f"match-{i}",
+                label=f"{fx['home']} vs {fx['away']} (Group {fx['group']})",
+                net_exposure_usd=net,
+                limit_usd=500.0,
+                utilization=abs(net) / 500.0,
+                optimizer_target_usd=0.0,  # filled below
+                positions=positions,
+            )
+        )
+
+    # REAL optimizer: block covariance (same-cluster positions correlated).
+    n = len(clusters)
+    cov = np.eye(n) * 0.04 + np.ones((n, n)) * 0.005
+    optimizer = PortfolioOptimizer(risk_budget=1500.0, per_event_limit=500.0)
+    targets = optimizer.optimize(np.array(edges), cov)
+    scale = 1500.0 / max(1e-9, float(np.abs(targets).sum()))
+    for c, t in zip(clusters, targets):
+        c.optimizer_target_usd = round(float(t) * scale, 2)
+
+    data = PortfolioState(
+        clusters=clusters,
+        total_exposure_usd=round(sum(c.net_exposure_usd for c in clusters), 2),
+        risk_budget_usd=1500.0,
     )
     return Envelope(data=data, provenance=make_provenance(state.cfg, source="mock"))

@@ -84,6 +84,64 @@ export async function fetchCoherence(): Promise<Envelope<CoherenceReport>> {
 }
 
 export type TournamentState = components["schemas"]["TournamentState"];
+export type ConsoleState = components["schemas"]["ConsoleState"];
+export type PortfolioState = components["schemas"]["PortfolioState"];
+export type CommandResult = components["schemas"]["CommandResult"];
+export type CommandStateOut = components["schemas"]["CommandStateOut"];
+
+export async function fetchConsole(ticker: string): Promise<Envelope<ConsoleState>> {
+  return unwrap(
+    await client.GET("/api/v1/console/{ticker}", { params: { path: { ticker } } }),
+    `GET /api/v1/console/${ticker}`,
+  );
+}
+
+export async function fetchPortfolio(): Promise<Envelope<PortfolioState>> {
+  return unwrap(await client.GET("/api/v1/portfolio"), "GET /api/v1/portfolio");
+}
+
+export async function fetchCommandState(): Promise<Envelope<CommandStateOut>> {
+  return unwrap(await client.GET("/api/v1/commands/state"), "GET /api/v1/commands/state");
+}
+
+// --- Fenced writes (Phase 4): the terminal's ONLY mutations. Each one is a
+// ledgered backend command; the server-side fence is authoritative and a
+// 409 here means the fence refused (e.g. resume while killed) - surface it,
+// never retry silently.
+
+export async function commandKill(reason: string): Promise<Envelope<CommandResult>> {
+  return unwrap(
+    await client.POST("/api/v1/commands/kill-switch", { body: { reason } }),
+    "POST kill-switch",
+  );
+}
+
+export async function commandPause(ticker: string, reason?: string): Promise<Envelope<CommandResult>> {
+  return unwrap(
+    await client.POST("/api/v1/commands/quoting/{ticker}/pause", {
+      params: { path: { ticker } },
+      body: { reason: reason ?? null },
+    }),
+    "POST pause",
+  );
+}
+
+export async function commandResume(ticker: string, reason?: string): Promise<Envelope<CommandResult>> {
+  return unwrap(
+    await client.POST("/api/v1/commands/quoting/{ticker}/resume", {
+      params: { path: { ticker } },
+      body: { reason: reason ?? null },
+    }),
+    "POST resume",
+  );
+}
+
+export async function commandWiden(factor: number): Promise<Envelope<CommandResult>> {
+  return unwrap(
+    await client.POST("/api/v1/commands/quoting/widen-all", { body: { factor } }),
+    "POST widen-all",
+  );
+}
 export type SimQueryEvent = components["schemas"]["SimQueryEvent"];
 export type SimQueryResult = components["schemas"]["SimQueryResult"];
 
