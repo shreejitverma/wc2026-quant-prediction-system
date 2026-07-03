@@ -210,9 +210,76 @@ Where $\psi_{team}$ is a scaling factor adjusting for the step-up in competition
 
 ---
 
-## 5. Meta-Model Ensembler (`meta_ensemble.py`)
+## 5. M5: Gradient Boosting (LightGBM) (`gbm.py`)
 
-We combine M1, M2, M3, and M4 dynamically. The ensembler splits the data into a training set and a hold-out validation set.
+A non-linear model using LightGBM (Gradient Boosting Decision Trees) to predict team scoring expectations by mapping global Elo ratings differences, home advantage, and neutral field status.
+
+### Non-linear Goal Expectancy
+Matches are flattened into team-level training matrices where the target $Y$ is goals scored, and features are:
+
+$$
+X = [is\_home, neutral, Elo_{diff}] \in \mathbb{R}^{2N \times 3}
+$$
+
+Where $Elo_{diff} = Elo_{team} - Elo_{opponent}$. The trees are optimized using a Poisson objective function to directly output expected goals (lambdas) minimizing Poisson log-loss:
+
+$$
+Loss(Y, \hat{\lambda}) = - \sum_{k} (Y_k \log \hat{\lambda}_k - \hat{\lambda}_k)
+$$
+
+The individual expectations yield independent Poisson goals distributions:
+
+$$
+P(X=x, Y=y) = \text{poisson.pmf}(x, \hat{\lambda}_{home}) \times \text{poisson.pmf}(y, \hat{\lambda}_{away})
+$$
+
+### Operational Breakdown
+*   **Why We Use It (Rationale)**: Traditional Poisson models (M1, M2, M3) assume log-linear relationships between ratings and goals. However, the true impact of team ratings differences on goal scoring is non-linear (e.g. a $200$-point Elo gap might scale scoring expectations exponentially up to a threshold, then plateau). LightGBM captures these non-linear boundaries natively.
+*   **Pros**:
+    *   **Non-linear Interaction**: Handles thresholds and conditional plateaus automatically.
+    *   **No Parametric Assumptions**: Does not require manual link functions to scale rating gaps.
+*   **Cons**:
+    *   **Black-Box Trees**: Individual predictions lack direct coefficient interpretations.
+    *   **Out-of-Bounds Extremes**: Fails on massive rating gaps that fall outside the historical training limits, sometimes producing highly volatile outputs.
+*   **Data Requirements & Schema**:
+    *   Queries Elo tables and normalized fixtures.
+    *   Required fields: `elo_home`, `elo_away`, `neutral`, `home_score`, `away_score`.
+*   **Football Failure Modes**:
+    *   **Historical Imbalance**: In rare matchups (e.g., Elo diff exceeding $600$ points), LightGBM trees may output uncalibrated probabilities because it has never seen a similar split.
+
+---
+
+## 6. M6: Market-Implied Bivariate Poisson (`market_implied.py`)
+
+Rather than looking at historical stats, M6 solves for the statistical parameters $\lambda$ and $\mu$ that minimize the discrepancy with live exchange pricing (1X2 Polymarket/Kalshi probabilities).
+
+### De-vigged Optimization
+We extract the target de-vigged market probabilities for Home Win ($T_H$), Draw ($T_D$), and Away Win ($T_A$). We then run an L-BFGS-B optimization to find the parameters $\lambda, \mu$ that satisfy:
+
+$$
+\min_{\lambda, \mu} \left( (P_{Home}(\lambda, \mu) - T_H)^2 + (P_{Draw}(\lambda, \mu) - T_D)^2 + (P_{Away}(\lambda, \mu) - T_A)^2 \right)
+$$
+
+Where $P_c$ are the computed probabilities derived from the Bivariate Poisson matrix. This allows us to convert raw 3-way moneyline pricing into a full 15x15 scoreline matrix.
+
+### Operational Breakdown
+*   **Why We Use It (Rationale)**: Market pricing represents the consensus belief of all participants (incorporating news, injuries, and weather). M6 acts as a market anchor. If our statistical models differ from the market-implied score distribution, M6 tells us *what the market expects* so we can calculate exact edges on complex side markets (e.g. Exact Scoreline, Over/Under, Handicap).
+*   **Pros**:
+    *   **Consensus Anchor**: Represents the sum of all market information.
+    *   **Arbitrage Base**: Crucial for mapping 3-way moneyline contracts to complex derivative contracts coherently.
+*   **Cons**:
+    *   **No Independent Signal**: Does not generate its own alpha; completely dependent on the quality and liquidity of the primary market.
+*   **Data Requirements & Schema**:
+    *   Requires active real-time WebSocket or REST orderbook feeds from Kalshi or Polymarket.
+    *   Required fields: `market_p_home`, `market_p_draw`, `market_p_away`.
+*   **Football Failure Modes**:
+    *   **Illiquid Markets**: In low-liquidity matches, wide spreads or manipulation can distort target probabilities, causing M6 to output completely uncalibrated score matrices.
+
+---
+
+## 7. Meta-Model Ensembler (`meta_ensemble.py`)
+
+We combine M1, M2, M3, M4, M5, and M6 dynamically. The ensembler splits the data into a training set and a hold-out validation set.
 
 ### Weight Optimization
 We define a vector of weights $w$ (where $\sum w_m = 1$) and optimize it using the BFGS algorithm to minimize the Categorical Cross-Entropy Log-Loss on the hold-out set:
