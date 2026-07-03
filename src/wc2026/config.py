@@ -64,6 +64,17 @@ class NewsConfig(_Strict):
     review_threshold_quote_move: float = 0.02  # facts moving a quote > 2% -> human queue
 
 
+class NotifyConfig(_Strict):
+    """ntfy push for the few alerts that matter away from the desk (Phase 6).
+    Disabled by default; the topic is a capability token - backend-only,
+    never exposed through the API or frontend."""
+
+    enabled: bool = False
+    url: str = "https://ntfy.sh"
+    topic: str | None = None
+    min_severity: Literal["info", "warn", "critical"] = "warn"
+
+
 class AppConfig(_Strict):
     mode: Literal["paper", "live"] = "paper"
     seed: int = 20260611  # WC2026 opening day; fixed default for reproducibility
@@ -72,6 +83,7 @@ class AppConfig(_Strict):
     kill_switch: KillSwitchConfig = Field(default_factory=KillSwitchConfig)
     venues: VenuesConfig = Field(default_factory=VenuesConfig)
     news: NewsConfig = Field(default_factory=NewsConfig)
+    notify: NotifyConfig = Field(default_factory=NotifyConfig)
 
 
 def load_config(path: str | Path) -> AppConfig:

@@ -85,6 +85,24 @@ export async function fetchCoherence(): Promise<Envelope<CoherenceReport>> {
 
 export type TournamentState = components["schemas"]["TournamentState"];
 export type ConsoleState = components["schemas"]["ConsoleState"];
+export type AlertsPage = components["schemas"]["AlertsPage"];
+export type Alert = components["schemas"]["Alert"];
+export type OpsFreshness = components["schemas"]["OpsFreshness"];
+
+export async function fetchAlerts(): Promise<Envelope<AlertsPage>> {
+  return unwrap(await client.GET("/api/v1/alerts"), "GET /api/v1/alerts");
+}
+
+export async function fetchOpsFreshness(): Promise<Envelope<OpsFreshness>> {
+  return unwrap(await client.GET("/api/v1/ops/freshness"), "GET /api/v1/ops/freshness");
+}
+
+export async function commandAckAlert(alertId: string): Promise<Envelope<CommandResult>> {
+  return unwrap(
+    await client.POST("/api/v1/alerts/{alert_id}/ack", { params: { path: { alert_id: alertId } } }),
+    "POST ack alert",
+  );
+}
 export type PortfolioState = components["schemas"]["PortfolioState"];
 export type CommandResult = components["schemas"]["CommandResult"];
 export type CommandStateOut = components["schemas"]["CommandStateOut"];

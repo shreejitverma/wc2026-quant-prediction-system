@@ -4,6 +4,40 @@
  */
 
 export interface paths {
+    "/api/v1/alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Alerts */
+        get: operations["get_alerts_api_v1_alerts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/alerts/{alert_id}/ack": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Ack Alert */
+        post: operations["post_ack_alert_api_v1_alerts__alert_id__ack_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/coherence": {
         parameters: {
             query?: never;
@@ -247,6 +281,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ops/freshness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Ops Freshness */
+        get: operations["get_ops_freshness_api_v1_ops_freshness_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/portfolio": {
         parameters: {
             query?: never;
@@ -362,6 +413,42 @@ export interface components {
             /** Team */
             team: string;
         };
+        /** Alert */
+        Alert: {
+            /** Acked */
+            acked: boolean;
+            /** Acked At */
+            acked_at: string | null;
+            /** Alert Id */
+            alert_id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "calibration_drift" | "divergence" | "stale_source" | "reconciliation";
+            /**
+             * Message
+             * @description Carries its own diagnosis discipline (e.g. divergence copy says check freshness FIRST).
+             */
+            message: string;
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "info" | "warn" | "critical";
+            /** Ts Utc */
+            ts_utc: string;
+        };
+        /** AlertsPage */
+        AlertsPage: {
+            /** Alerts */
+            alerts: components["schemas"]["Alert"][];
+            /**
+             * Unacked
+             * @description Pre-computed so the status strip never counts client-side.
+             */
+            unacked: number;
+        };
         /**
          * Attribution
          * @description Why the ensemble disagrees with the market, one feature at a time, in
@@ -475,6 +562,11 @@ export interface components {
             /** Polymarket */
             polymarket: number | null;
         };
+        /** Envelope[AlertsPage] */
+        Envelope_AlertsPage_: {
+            data: components["schemas"]["AlertsPage"];
+            provenance: components["schemas"]["Provenance"];
+        };
         /** Envelope[CoherenceReport] */
         Envelope_CoherenceReport_: {
             data: components["schemas"]["CoherenceReport"];
@@ -518,6 +610,11 @@ export interface components {
         /** Envelope[MatchTimeline] */
         Envelope_MatchTimeline_: {
             data: components["schemas"]["MatchTimeline"];
+            provenance: components["schemas"]["Provenance"];
+        };
+        /** Envelope[OpsFreshness] */
+        Envelope_OpsFreshness_: {
+            data: components["schemas"]["OpsFreshness"];
             provenance: components["schemas"]["Provenance"];
         };
         /** Envelope[PortfolioState] */
@@ -597,6 +694,22 @@ export interface components {
             ticker: string;
             /** Ts Utc */
             ts_utc: string;
+        };
+        /** FreshnessSource */
+        FreshnessSource: {
+            /** Last Success Utc */
+            last_success_utc: string;
+            /** Max Age Seconds */
+            max_age_seconds: number;
+            /** Source */
+            source: string;
+            /** Staleness Seconds */
+            staleness_seconds: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ok" | "stale" | "down";
         };
         /** GroupTable */
         GroupTable: {
@@ -925,6 +1038,13 @@ export interface components {
             /** Size */
             size: number;
         };
+        /** OpsFreshness */
+        OpsFreshness: {
+            /** Reconciliation */
+            reconciliation: components["schemas"]["ReconciliationRow"][];
+            /** Sources */
+            sources: components["schemas"]["FreshnessSource"][];
+        };
         /** PauseResumeRequest */
         PauseResumeRequest: {
             /** Reason */
@@ -1044,6 +1164,18 @@ export interface components {
             variance: number;
             /** Widen Factor */
             widen_factor: number;
+        };
+        /** ReconciliationRow */
+        ReconciliationRow: {
+            /** Detail */
+            detail: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "match" | "mismatch" | "unknown";
+            /** Venue */
+            venue: string;
         };
         /**
          * RunOut
@@ -1284,6 +1416,57 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    get_alerts_api_v1_alerts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AlertsPage_"];
+                };
+            };
+        };
+    };
+    post_ack_alert_api_v1_alerts__alert_id__ack_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                alert_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_CommandResult_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_coherence_api_v1_coherence_get: {
         parameters: {
             query?: never;
@@ -1664,6 +1847,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_list_MarketOpportunity__"];
+                };
+            };
+        };
+    };
+    get_ops_freshness_api_v1_ops_freshness_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_OpsFreshness_"];
                 };
             };
         };

@@ -44,6 +44,90 @@
         "title": "AdvancementRow",
         "type": "object"
       },
+      "Alert": {
+        "properties": {
+          "acked": {
+            "title": "Acked",
+            "type": "boolean"
+          },
+          "acked_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acked At"
+          },
+          "alert_id": {
+            "title": "Alert Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "calibration_drift",
+              "divergence",
+              "stale_source",
+              "reconciliation"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "message": {
+            "description": "Carries its own diagnosis discipline (e.g. divergence copy says check freshness FIRST).",
+            "title": "Message",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "info",
+              "warn",
+              "critical"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "ts_utc": {
+            "title": "Ts Utc",
+            "type": "string"
+          }
+        },
+        "required": [
+          "alert_id",
+          "ts_utc",
+          "severity",
+          "kind",
+          "message",
+          "acked",
+          "acked_at"
+        ],
+        "title": "Alert",
+        "type": "object"
+      },
+      "AlertsPage": {
+        "properties": {
+          "alerts": {
+            "items": {
+              "$ref": "#/components/schemas/Alert"
+            },
+            "title": "Alerts",
+            "type": "array"
+          },
+          "unacked": {
+            "description": "Pre-computed so the status strip never counts client-side.",
+            "title": "Unacked",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "alerts",
+          "unacked"
+        ],
+        "title": "AlertsPage",
+        "type": "object"
+      },
       "Attribution": {
         "description": "Why the ensemble disagrees with the market, one feature at a time, in\nfootball language. delta_pp is signed percentage points toward `direction`.",
         "properties": {
@@ -352,6 +436,22 @@
         "title": "CrossVenueRow",
         "type": "object"
       },
+      "Envelope_AlertsPage_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AlertsPage"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          }
+        },
+        "required": [
+          "data",
+          "provenance"
+        ],
+        "title": "Envelope[AlertsPage]",
+        "type": "object"
+      },
       "Envelope_CoherenceReport_": {
         "properties": {
           "data": {
@@ -494,6 +594,22 @@
           "provenance"
         ],
         "title": "Envelope[MatchTimeline]",
+        "type": "object"
+      },
+      "Envelope_OpsFreshness_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/OpsFreshness"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          }
+        },
+        "required": [
+          "data",
+          "provenance"
+        ],
+        "title": "Envelope[OpsFreshness]",
         "type": "object"
       },
       "Envelope_PortfolioState_": {
@@ -688,6 +804,44 @@
           "context"
         ],
         "title": "Fill",
+        "type": "object"
+      },
+      "FreshnessSource": {
+        "properties": {
+          "last_success_utc": {
+            "title": "Last Success Utc",
+            "type": "string"
+          },
+          "max_age_seconds": {
+            "title": "Max Age Seconds",
+            "type": "integer"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "staleness_seconds": {
+            "title": "Staleness Seconds",
+            "type": "number"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "stale",
+              "down"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "last_success_utc",
+          "staleness_seconds",
+          "max_age_seconds",
+          "status"
+        ],
+        "title": "FreshnessSource",
         "type": "object"
       },
       "GroupTable": {
@@ -1458,6 +1612,30 @@
         "title": "MyQuotes",
         "type": "object"
       },
+      "OpsFreshness": {
+        "properties": {
+          "reconciliation": {
+            "items": {
+              "$ref": "#/components/schemas/ReconciliationRow"
+            },
+            "title": "Reconciliation",
+            "type": "array"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/FreshnessSource"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "sources",
+          "reconciliation"
+        ],
+        "title": "OpsFreshness",
+        "type": "object"
+      },
       "PauseResumeRequest": {
         "properties": {
           "reason": {
@@ -1713,6 +1891,34 @@
           "skew"
         ],
         "title": "QuoteInputs",
+        "type": "object"
+      },
+      "ReconciliationRow": {
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "match",
+              "mismatch",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "venue": {
+            "title": "Venue",
+            "type": "string"
+          }
+        },
+        "required": [
+          "venue",
+          "status",
+          "detail"
+        ],
+        "title": "ReconciliationRow",
         "type": "object"
       },
       "RunOut": {
@@ -2306,6 +2512,63 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/alerts": {
+      "get": {
+        "operationId": "get_alerts_api_v1_alerts_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AlertsPage_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Alerts"
+      }
+    },
+    "/api/v1/alerts/{alert_id}/ack": {
+      "post": {
+        "operationId": "post_ack_alert_api_v1_alerts__alert_id__ack_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "alert_id",
+            "required": true,
+            "schema": {
+              "title": "Alert Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_CommandResult_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Ack Alert"
+      }
+    },
     "/api/v1/coherence": {
       "get": {
         "description": "Cross-venue rows come from the SAME opportunity rows the board serves;\ninternal rows mock the bracket-path-product vs direct-price check the\nsimulator's joint draws will answer for real (ADR-0006's coherence edge).",
@@ -2776,6 +3039,24 @@
           }
         },
         "summary": "Get Opportunities"
+      }
+    },
+    "/api/v1/ops/freshness": {
+      "get": {
+        "operationId": "get_ops_freshness_api_v1_ops_freshness_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_OpsFreshness_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Ops Freshness"
       }
     },
     "/api/v1/portfolio": {

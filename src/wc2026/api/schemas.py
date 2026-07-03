@@ -501,3 +501,44 @@ class PauseResumeRequest(BaseModel):
 
 class WidenRequest(BaseModel):
     factor: float = Field(description="Spread multiplier; clamped server-side to [1.0, 3.0].")
+
+
+# --- Ops + alerts (Phase 6 core). Alerts are mock until the alert engine
+# runs; ACK STATE IS REAL (ledger command fold). Freshness matrix is mock
+# until ingestion persists snapshots; pipeline runs are real (runs.jsonl). ---
+
+
+class Alert(BaseModel):
+    alert_id: str
+    ts_utc: str
+    severity: Literal["info", "warn", "critical"]
+    kind: Literal["calibration_drift", "divergence", "stale_source", "reconciliation"]
+    message: str = Field(
+        description="Carries its own diagnosis discipline (e.g. divergence copy says check freshness FIRST)."
+    )
+    acked: bool
+    acked_at: str | None
+
+
+class AlertsPage(BaseModel):
+    alerts: list[Alert]
+    unacked: int = Field(description="Pre-computed so the status strip never counts client-side.")
+
+
+class FreshnessSource(BaseModel):
+    source: str
+    last_success_utc: str
+    staleness_seconds: float
+    max_age_seconds: int
+    status: Literal["ok", "stale", "down"]
+
+
+class ReconciliationRow(BaseModel):
+    venue: str
+    status: Literal["match", "mismatch", "unknown"]
+    detail: str
+
+
+class OpsFreshness(BaseModel):
+    sources: list[FreshnessSource]
+    reconciliation: list[ReconciliationRow]

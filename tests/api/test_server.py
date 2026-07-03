@@ -369,3 +369,37 @@ def test_portfolio_clusters(client: TestClient) -> None:
     for c in p["clusters"]:
         assert abs(c["utilization"] - abs(c["net_exposure_usd"]) / c["limit_usd"]) < 1e-6
     assert abs(p["total_exposure_usd"] - sum(c["net_exposure_usd"] for c in p["clusters"])) < 1e-6
+
+
+# --- Phase 6 core: alerts (REAL ack state over mock alerts) + freshness ------
+
+
+def test_alert_ack_is_ledgered_idempotent_and_stable(client: TestClient, state: ApiState) -> None:
+    page = _envelope(client.get("/api/v1/alerts").json())["data"]
+    assert page["unacked"] == len(page["alerts"]) > 0
+    target = page["alerts"][0]["alert_id"]
+    r1 = _envelope(client.post(f"/api/v1/alerts/{target}/ack").json())["data"]
+    assert not r1["already"] and r1["ledger_seq"] is not None
+    r2 = _envelope(client.post(f"/api/v1/alerts/{target}/ack").json())["data"]
+    assert r2["already"] and r2["ledger_seq"] is None
+    # Ack survives a fresh read (ledger fold) and unacked count drops by one.
+    page2 = _envelope(client.get("/api/v1/alerts").json())["data"]
+    acked = [a for a in page2["alerts"] if a["alert_id"] == target][0]
+    assert acked["acked"] and acked["acked_at"]
+    assert page2["unacked"] == page["unacked"] - 1
+    assert sum(1 for e in AppendOnlyLedger(state.ledger_path).read_all() if e["kind"] == "command") == 1
+    assert client.post("/api/v1/alerts/NOPE/ack").status_code == 404
+
+
+def test_divergence_alert_carries_diagnosis_discipline(client: TestClient) -> None:
+    page = _envelope(client.get("/api/v1/alerts").json())["data"]
+    div = [a for a in page["alerts"] if a["kind"] == "divergence"]
+    assert div and "stale" in div[0]["message"].lower()
+
+
+def test_freshness_status_consistent(client: TestClient) -> None:
+    body = _envelope(client.get("/api/v1/ops/freshness").json())["data"]
+    assert body["sources"]
+    for s_ in body["sources"]:
+        expected = "stale" if s_["staleness_seconds"] > s_["max_age_seconds"] else "ok"
+        assert s_["status"] == expected

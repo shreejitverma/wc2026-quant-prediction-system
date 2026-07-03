@@ -35,6 +35,7 @@ from ..time_utils import from_iso, to_iso, utc_now
 from .commands import (
     CommandRejected,
     CommandState,
+    command_ack_alert,
     command_kill,
     command_pause,
     command_resume,
@@ -56,6 +57,8 @@ from .mock_tournament import (
 from .provenance import make_provenance
 from .schemas import (
     AdvancementRow,
+    Alert,
+    AlertsPage,
     Attribution,
     BookLevel,
     ClusterPosition,
@@ -67,6 +70,7 @@ from .schemas import (
     Envelope,
     FairValueStep,
     Fill,
+    FreshnessSource,
     GroupTable,
     HealthData,
     InternalViolation,
@@ -82,11 +86,13 @@ from .schemas import (
     MatchTimeline,
     ModelProbs,
     MyQuotes,
+    OpsFreshness,
     PauseResumeRequest,
     PortfolioState,
     PositionCluster,
     ProbWithBand,
     QuoteInputs,
+    ReconciliationRow,
     RunOut,
     RunsPage,
     SettlementMapping,
@@ -1010,4 +1016,119 @@ def get_portfolio(state: StateDep) -> Envelope[PortfolioState]:
         total_exposure_usd=round(sum(c.net_exposure_usd for c in clusters), 2),
         risk_budget_usd=1500.0,
     )
+    return Envelope(data=data, provenance=make_provenance(state.cfg, source="mock"))
+
+
+# --- Ops + alerts (Phase 6 core): mock alerts/freshness, REAL ack state ----
+
+
+def _mock_alerts_raw(state: ApiState) -> list[dict]:
+    """Deterministic alert set with STABLE ids (seed-derived, not time-derived)
+    so ledgered acks survive restarts and re-reads."""
+    rng = random.Random(state.cfg.seed + 7)
+    now_s = utc_now().timestamp()
+    defs = [
+        {
+            "kind": "divergence",
+            "severity": "critical",
+            "age_min": 12,
+            "message": (
+                "Model vs de-vigged market moved 6.2pp on KX-WC26-USAENG-WIN in 10 minutes. "
+                "Check data freshness FIRST: divergence spikes usually mean YOUR data is stale, "
+                "not that the market is wrong."
+            ),
+        },
+        {
+            "kind": "calibration_drift",
+            "severity": "warn",
+            "age_min": 95,
+            "message": (
+                "Rolling 200-sample calibration slope drifted to 0.87 (target 1.0 ± 0.1) on 1X2 markets. "
+                "Ensemble may be overconfident; review before widening size."
+            ),
+        },
+        {
+            "kind": "stale_source",
+            "severity": "warn",
+            "age_min": 260,
+            "message": "Elo ingest last succeeded 26h ago (max 24h). Ratings-driven features are running on yesterday.",
+        },
+        {
+            "kind": "reconciliation",
+            "severity": "info",
+            "age_min": 420,
+            "message": "Paper-book vs exchange-state reconciliation completed clean on both venues.",
+        },
+    ]
+    alerts = []
+    for d in defs:
+        stable = f"AL-{d['kind']}-{rng.randrange(10_000, 99_999)}"
+        alerts.append(
+            {
+                **d,
+                "alert_id": stable,
+                "ts_utc": to_iso(datetime.fromtimestamp(now_s - d["age_min"] * 60, tz=UTC)),
+            }
+        )
+    return alerts
+
+
+@app.get("/api/v1/alerts", response_model=Envelope[AlertsPage])
+def get_alerts(state: StateDep) -> Envelope[AlertsPage]:
+    acked = read_command_state(state).acked_alerts
+    alerts = [
+        Alert(
+            alert_id=a["alert_id"],
+            ts_utc=a["ts_utc"],
+            severity=a["severity"],
+            kind=a["kind"],
+            message=a["message"],
+            acked=a["alert_id"] in acked,
+            acked_at=acked.get(a["alert_id"]),
+        )
+        for a in _mock_alerts_raw(state)
+    ]
+    alerts.sort(key=lambda a: (a.acked, a.ts_utc), reverse=False)
+    data = AlertsPage(alerts=alerts, unacked=sum(1 for a in alerts if not a.acked))
+    return Envelope(data=data, provenance=make_provenance(state.cfg, source="mock"))
+
+
+@app.post("/api/v1/alerts/{alert_id}/ack", response_model=Envelope[CommandResult])
+def post_ack_alert(alert_id: str, state: StateDep) -> Envelope[CommandResult]:
+    known = {a["alert_id"] for a in _mock_alerts_raw(state)}
+    if alert_id not in known:
+        raise HTTPException(status_code=404, detail={"code": "unknown_alert", "alert_id": alert_id})
+    s, seq = command_ack_alert(state, alert_id)
+    return _command_envelope(state, s, seq, already=seq is None)
+
+
+@app.get("/api/v1/ops/freshness", response_model=Envelope[OpsFreshness])
+def get_ops_freshness(state: StateDep) -> Envelope[OpsFreshness]:
+    rng = random.Random(state.cfg.seed + 13)
+    now_s = utc_now().timestamp()
+    defs = [
+        ("kalshi order books", 45, 120),
+        ("polymarket order books", 51, 120),
+        ("fbref match data", 9_000, 43_200),
+        ("elo ratings", 93_600, 86_400),  # deliberately stale in mock
+        ("venue / weather", 960, 3_600),
+    ]
+    sources = []
+    for name, age, max_age in defs:
+        jitter = rng.uniform(0.9, 1.1)
+        staleness = age * jitter
+        sources.append(
+            FreshnessSource(
+                source=name,
+                last_success_utc=to_iso(datetime.fromtimestamp(now_s - staleness, tz=UTC)),
+                staleness_seconds=staleness,
+                max_age_seconds=max_age,
+                status="stale" if staleness > max_age else "ok",
+            )
+        )
+    recon = [
+        ReconciliationRow(venue="kalshi", status="match", detail="0 position diffs, 0 order diffs (paper)"),
+        ReconciliationRow(venue="polymarket", status="match", detail="0 position diffs, 0 order diffs (paper)"),
+    ]
+    data = OpsFreshness(sources=sources, reconciliation=recon)
     return Envelope(data=data, provenance=make_provenance(state.cfg, source="mock"))

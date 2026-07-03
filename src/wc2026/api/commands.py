@@ -34,6 +34,7 @@ class CommandState:
     kill_reason: str | None = None
     paused_tickers: dict[str, str] = field(default_factory=dict)  # ticker -> ts_utc
     widen_factor: float = 1.0
+    acked_alerts: dict[str, str] = field(default_factory=dict)  # alert_id -> ts_utc
 
 
 def fold_command_state(entries: list[dict[str, Any]]) -> CommandState:
@@ -54,6 +55,8 @@ def fold_command_state(entries: list[dict[str, Any]]) -> CommandState:
             s.paused_tickers.pop(str(p["ticker"]), None)
         elif action == "widen_all":
             s.widen_factor = float(p.get("factor", 1.0))
+        elif action == "ack_alert" and p.get("alert_id"):
+            s.acked_alerts[str(p["alert_id"])] = str(e["ts_utc"])
     return s
 
 
@@ -121,4 +124,13 @@ def command_resume(state: ApiState, ticker: str, reason: str | None) -> tuple[Co
 def command_widen(state: ApiState, factor: float) -> tuple[CommandState, int]:
     clamped = max(WIDEN_MIN, min(WIDEN_MAX, factor))
     entry = _append(state, "widen_all", factor=clamped, requested_factor=factor)
+    return read_command_state(state), int(entry["seq"])
+
+
+def command_ack_alert(state: ApiState, alert_id: str) -> tuple[CommandState, int | None]:
+    """Ledgered acknowledgment; idempotent (a second ack appends nothing)."""
+    s = read_command_state(state)
+    if alert_id in s.acked_alerts:
+        return s, None
+    entry = _append(state, "ack_alert", alert_id=alert_id)
     return read_command_state(state), int(entry["seq"])

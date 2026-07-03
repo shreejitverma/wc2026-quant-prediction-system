@@ -1,7 +1,8 @@
 import { Bell, Search } from "lucide-react";
+import { useNavigate } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
-import { commandKill, fetchHealth, type Envelope, type HealthData } from "@/lib/api";
+import { commandKill, fetchAlerts, fetchHealth, type Envelope, type HealthData } from "@/lib/api";
 import { useTopic, useWsStatus } from "@/lib/wsHooks";
 import { FreshnessDot } from "@/components/primitives/FreshnessDot";
 import { ConfirmTyped } from "@/components/primitives/ConfirmTyped";
@@ -17,7 +18,13 @@ import { useUiStore } from "@/store/uiStore";
  */
 export function Topbar() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { setPaletteOpen, killDialogOpen, setKillDialogOpen } = useUiStore();
+
+  // Unacked count comes pre-computed from the backend (AlertsPage.unacked);
+  // the strip never counts client-side.
+  const alerts = useQuery({ queryKey: ["alerts"], queryFn: fetchAlerts, refetchInterval: 30_000 });
+  const unacked = alerts.data?.data.unacked ?? 0;
 
   const health = useQuery({
     queryKey: ["health"],
@@ -99,9 +106,16 @@ export function Topbar() {
 
         <button
           className="relative p-2 hover:bg-accent rounded-full transition-colors"
-          title="Alert center arrives in Phase 6; no alerts exist yet."
+          title={unacked > 0 ? `${unacked} unacknowledged alerts — click for Ops` : "Alert center (Ops)"}
+          onClick={() => navigate("/ops")}
+          data-testid="alert-bell"
         >
           <Bell className="h-4 w-4" />
+          {unacked > 0 && (
+            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-status-warn px-1 font-mono text-[9px] font-bold text-background">
+              {unacked}
+            </span>
+          )}
         </button>
 
         {h?.killed ? (
