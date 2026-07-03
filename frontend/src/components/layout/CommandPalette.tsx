@@ -69,7 +69,7 @@ export function CommandPalette() {
             <Command.Item
               key={m.match_id}
               value={`match ${m.home_team} ${m.away_team}`}
-              onSelect={() => go("/matches")}
+              onSelect={() => go(`/matches/${m.match_id}`)}
               className="cursor-pointer rounded px-3 py-2 text-sm aria-selected:bg-accent"
             >
               {m.home_team} vs {m.away_team}

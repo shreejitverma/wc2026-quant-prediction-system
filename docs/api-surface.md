@@ -37,8 +37,8 @@ The frontend never touches artifacts, exchanges, or secrets.
 | `GET /api/v1/ledger/verify` | hash-chain integrity walk | **real** |
 | `GET /api/v1/runs`, `GET /api/v1/runs/{run_id}` | `wc2026.runs` (`data/runs/runs.jsonl`) | **real** |
 | `GET /api/v1/matches` | fixtures + `models.meta_ensemble` outputs | built, **mock** |
-| `GET /api/v1/matches/{id}` — per-model probs, scoreline matrix, ensemble weights, feature attribution | `models/*`, `features.store` | planned (Phase 2) |
-| `GET /api/v1/matches/{id}/timeline` — market price vs fair value + event markers (lineups, goals, news) | order-book history + FV snapshots | planned (Phase 2) |
+| `GET /api/v1/matches/{id}` — per-model probs, scoreline matrix, ensemble weights, feature attribution, venue/rest/lineup header | `models/*`, `features.store` | built, **mock** (internally coherent; probs derived from served matrices) |
+| `GET /api/v1/matches/{id}/timeline` — market price vs fair value + band + event markers (lineups, goals, news) | order-book history + FV snapshots | built, **mock** |
 | `GET /api/v1/tournament` — bracket/group/third-place advancement probabilities | `simulator.{engine,group_stage,bracket_rules}` persisted draws | planned (Phase 2) |
 | `POST /api/v1/sim/query` — joint-event probability from persisted draws | simulator draws in Parquet, DuckDB | planned (Phase 2) |
 | `GET /api/v1/contracts/{id}/fair-value` — decomposition: model prob → fee → timing → resolution risk; settlement mapping + confirmation status | `pricing.{fair_value,mapper}` | planned (Phase 3) |

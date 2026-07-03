@@ -6,6 +6,7 @@ import { GlobalHotkeys } from "@/components/layout/GlobalHotkeys";
 import QueryProvider from "@/providers/QueryProvider";
 import CommandCenterPage from "@/pages/CommandCenter";
 import MatchesPage from "@/pages/Matches";
+import MatchDetailPage from "@/pages/MatchDetail";
 import TournamentPage from "@/pages/Tournament";
 import OpportunitiesPage from "@/pages/Opportunities";
 import ConsolePage from "@/pages/Console";
@@ -30,6 +31,7 @@ export function App() {
               <Routes>
                 <Route path="/" element={<CommandCenterPage />} />
                 <Route path="/matches" element={<MatchesPage />} />
+                <Route path="/matches/:matchId" element={<MatchDetailPage />} />
                 <Route path="/tournament" element={<TournamentPage />} />
                 <Route path="/opportunities" element={<OpportunitiesPage />} />
                 <Route path="/console" element={<ConsolePage />} />

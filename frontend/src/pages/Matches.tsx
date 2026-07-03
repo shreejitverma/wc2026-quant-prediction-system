@@ -1,3 +1,4 @@
+import { Link } from "react-router"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useQuery } from "@tanstack/react-query"
@@ -22,8 +23,9 @@ export default function MatchesPage() {
       <SourceBanner provenances={[envelope?.provenance]} />
 
       <div className="grid gap-6">
-        {matches?.map((match: MatchPrediction, i: number) => (
-          <Card key={i} className="overflow-hidden">
+        {matches?.map((match: MatchPrediction) => (
+          <Card key={match.match_id} className="overflow-hidden transition-colors hover:border-foreground/25">
+            <Link to={`/matches/${match.match_id}`} className="block" aria-label={`${match.home_team} vs ${match.away_team} detail`}>
             <div className="flex flex-col md:flex-row">
               <div className="p-6 flex-1 border-b md:border-b-0 md:border-r bg-card/50">
                 <div className="flex items-center justify-between mb-4">
@@ -59,6 +61,7 @@ export default function MatchesPage() {
                 })}
               </div>
             </div>
+            </Link>
           </Card>
         ))}
       </div>
