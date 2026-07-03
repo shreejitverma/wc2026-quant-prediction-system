@@ -267,7 +267,7 @@ def test_tournament_counted_invariants(client: TestClient) -> None:
     # Advancement rows are monotonically non-increasing across rounds.
     for a in d["advancement"]:
         seq = [a["p_r32"], a["p_r16"], a["p_qf"], a["p_sf"], a["p_final"], a["p_champion"]]
-        assert all(x >= y - 1e-9 for x, y in zip(seq, seq[1:]))
+        assert all(x >= y - 1e-9 for x, y in zip(seq, seq[1:], strict=False))
 
 
 def test_sim_query_joint_leq_marginals(client: TestClient) -> None:

@@ -28,6 +28,7 @@ from typing import Annotated
 from fastapi import Depends, FastAPI, HTTPException, Query, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 
+from ..eval.metrics import bootstrap_ci, diebold_mariano, pointwise_brier, pointwise_log_loss
 from ..execution.portfolio import PortfolioOptimizer
 from ..execution.quoting import QuotingEngine
 from ..ledger import AppendOnlyLedger
@@ -43,7 +44,6 @@ from .commands import (
     read_command_state,
 )
 from .deps import ApiState, get_state
-from ..eval.metrics import bootstrap_ci, diebold_mariano, pointwise_brier, pointwise_log_loss
 from .mock_eval import MARKET_CLASSES, eval_table
 from .mock_tournament import (
     GROUPS,
@@ -97,13 +97,13 @@ from .schemas import (
     ModelRaceReport,
     MyQuotes,
     OpsFreshness,
+    PauseResumeRequest,
     PnlPoint,
     PnlReport,
-    PreregGate,
-    PreregPage,
-    PauseResumeRequest,
     PortfolioState,
     PositionCluster,
+    PreregGate,
+    PreregPage,
     ProbWithBand,
     QuoteInputs,
     RaceRow,
@@ -1024,7 +1024,7 @@ def get_portfolio(state: StateDep) -> Envelope[PortfolioState]:
     optimizer = PortfolioOptimizer(risk_budget=1500.0, per_event_limit=500.0)
     targets = optimizer.optimize(np.array(edges), cov)
     scale = 1500.0 / max(1e-9, float(np.abs(targets).sum()))
-    for c, t in zip(clusters, targets):
+    for c, t in zip(clusters, targets, strict=True):
         c.optimizer_target_usd = round(float(t) * scale, 2)
 
     data = PortfolioState(
@@ -1170,7 +1170,7 @@ def get_eval_clv(state: StateDep) -> Envelope[ClvReport]:
 
     cumulative = [
         ClvPoint(ts_utc=to_iso(datetime.fromtimestamp(ts, tz=UTC)), cum_pp=float(c))
-        for ts, c in zip(t.ts_epoch[::8], np.cumsum(clv_pp)[::8])
+        for ts, c in zip(t.ts_epoch[::8], np.cumsum(clv_pp)[::8], strict=True)
     ]
     edges = np.linspace(clv_pp.min(), clv_pp.max(), 21)
     counts, _ = np.histogram(clv_pp, bins=edges)
@@ -1274,7 +1274,7 @@ def get_eval_pnl(state: StateDep) -> Envelope[PnlReport]:
             cum_pnl=float(c),
             drawdown=float(d),
         )
-        for ts, c, d in zip(t.ts_epoch[::4], cum[::4], dd[::4])
+        for ts, c, d in zip(t.ts_epoch[::4], cum[::4], dd[::4], strict=True)
     ]
     data = PnlReport(
         mode=state.cfg.mode,
