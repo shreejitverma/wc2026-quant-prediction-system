@@ -70,6 +70,11 @@ nav:
       - The Honesty Harness: explanation/harness.md
       - Model Theory & Derivations: explanation/model_theory.md
       - Pricing & Market-Making: explanation/pricing_theory.md
+      - Compliance & Operations: explanation/compliance.md
+      - Model Evaluation Dossier: explanation/dossier.md
+  - Tutorials & Tracing:
+      - Zero to First Prediction: tutorials/zero_to_first.md
+      - End-to-End Prediction Trace: tutorials/end_to_end_trace.md
   - System Architecture: architecture.md
   - Mathematical Modeling Suite: models.md
   - System Reference:
@@ -81,6 +86,7 @@ nav:
       - CLI & Make Targets: reference/cli_make.md
       - Metrics & Math Formulas: reference/metrics_formulas.md
       - Frontend Operator Console: reference/frontend.md
+      - System Glossary: reference/glossary.md
   - Operational Runbooks:
       - Disaster Recovery & CLI: runbook.md
       - Incident Triaging & SOPs: howto/operations.md

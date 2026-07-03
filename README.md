@@ -11,6 +11,22 @@ A production-grade, end-to-end quantitative prediction, fair-value pricing, and 
 
 ---
 
+## 🗺️ Quick Documentation Navigation (30-Second Audience Routing)
+
+Choose your entry point depending on your role:
+
+* 📊 **The Lead Quantitative Trader**
+  * *Goal*: Understand the ensembler models, pricing models, and backtesting performance.
+  * *Entry Points*: [Model Mathematical Theory](docs/explanation/model_theory.md) | [Market & Pricing Theory](docs/explanation/pricing_theory.md) | [Model Evaluation Dossier](docs/explanation/dossier.md)
+* ⚙️ **The Systems Operator**
+  * *Goal*: Set up clean environments, monitor health panels, and run incident runbooks under stress.
+  * *Entry Points*: [Zero to First Prediction Tutorial](docs/tutorials/zero_to_first.md) | [Incident Triaging & SOPs](docs/howto/operations.md) | [CLI & Make Target Reference](docs/reference/cli_make.md)
+* 💻 **The Quantitative Developer**
+  * *Goal*: Add new prediction models, construct ingestion pipelines, or modify database schemas.
+  * *Entry Points*: [End-to-End Prediction Trace](docs/tutorials/end_to_end_trace.md) | [Add a Predictive Model](docs/howto/add_model.md) | [Add an Ingestion Pipeline](docs/howto/add_data_source.md)
+
+---
+
 ## 🧠 What Does This System Actually Do?
 
 This is not a traditional betting model. This is a complete **quantitative execution stack** that:
