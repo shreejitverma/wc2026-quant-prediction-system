@@ -11,14 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Get Health
-         * @description Config fences + ledger freshness.
-         *
-         *     Ledger recency is the best available "is anything happening" signal today;
-         *     the per-source freshness matrix arrives in Phase 6 once ingestion actually
-         *     writes snapshots.
-         */
+        /** Get Health */
         get: operations["get_health_api_v1_health_get"];
         put?: never;
         post?: never;
@@ -71,6 +64,40 @@ export interface paths {
         };
         /** Get Matches */
         get: operations["get_matches_api_v1_matches_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/matches/{match_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Match Detail */
+        get: operations["get_match_detail_api_v1_matches__match_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/matches/{match_id}/timeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Match Timeline */
+        get: operations["get_match_timeline_api_v1_matches__match_id__timeline_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -134,6 +161,24 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * Attribution
+         * @description Why the ensemble disagrees with the market, one feature at a time, in
+         *     football language. delta_pp is signed percentage points toward `direction`.
+         */
+        Attribution: {
+            /** Delta Pp */
+            delta_pp: number;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "home" | "draw" | "away" | "over" | "under";
+            /** Feature */
+            feature: string;
+            /** Note */
+            note: string;
+        };
         /** Envelope[HealthData] */
         Envelope_HealthData_: {
             data: components["schemas"]["HealthData"];
@@ -147,6 +192,16 @@ export interface components {
         /** Envelope[LedgerVerification] */
         Envelope_LedgerVerification_: {
             data: components["schemas"]["LedgerVerification"];
+            provenance: components["schemas"]["Provenance"];
+        };
+        /** Envelope[MatchDetail] */
+        Envelope_MatchDetail_: {
+            data: components["schemas"]["MatchDetail"];
+            provenance: components["schemas"]["Provenance"];
+        };
+        /** Envelope[MatchTimeline] */
+        Envelope_MatchTimeline_: {
+            data: components["schemas"]["MatchTimeline"];
             provenance: components["schemas"]["Provenance"];
         };
         /** Envelope[RunOut] */
@@ -244,6 +299,50 @@ export interface components {
             /** Valid */
             valid: boolean;
         };
+        /**
+         * LineupStatus
+         * @description Lineup confirmation is the biggest single information event before
+         *     kickoff; the UI renders its arrival unmissably.
+         */
+        LineupStatus: {
+            /**
+             * As Of
+             * @description UTC ISO time this status was last checked.
+             */
+            as_of: string;
+            /**
+             * Confirmed At
+             * @description UTC ISO time official lineups were published, if they were.
+             */
+            confirmed_at?: string | null;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "expected" | "confirmed";
+        };
+        /**
+         * MarketBaseline
+         * @description De-vigged 1X2 from the sharpest available book: the comparison line the
+         *     model board is judged against.
+         */
+        MarketBaseline: {
+            /** As Of */
+            as_of: string;
+            /**
+             * Overround
+             * @description Total implied prob before de-vig, e.g. 1.045.
+             */
+            overround: number;
+            /** P Away */
+            p_away: number;
+            /** P Draw */
+            p_draw: number;
+            /** P Home */
+            p_home: number;
+            /** Venue */
+            venue: string;
+        };
         /** MarketOpportunity */
         MarketOpportunity: {
             /**
@@ -266,6 +365,50 @@ export interface components {
              * @enum {string}
              */
             venue: "kalshi" | "polymarket";
+        };
+        /** MatchDetail */
+        MatchDetail: {
+            /** Away Team */
+            away_team: string;
+            ensemble: components["schemas"]["ModelProbs"];
+            /** Expected Goals Away */
+            expected_goals_away: number;
+            /** Expected Goals Home */
+            expected_goals_home: number;
+            /** Freshness Utc */
+            freshness_utc: string;
+            /** Group */
+            group: string | null;
+            /** Home Team */
+            home_team: string;
+            /** Kickoff Utc */
+            kickoff_utc: string;
+            lineup: components["schemas"]["LineupStatus"];
+            market: components["schemas"]["MarketBaseline"];
+            /** Match Id */
+            match_id: string;
+            /**
+             * Models
+             * @description Per-model outputs; ensemble is NOT in this list.
+             */
+            models: components["schemas"]["ModelProbs"][];
+            prob_away_win: components["schemas"]["ProbWithBand"];
+            prob_btts: components["schemas"]["ProbWithBand"];
+            prob_draw: components["schemas"]["ProbWithBand"];
+            prob_home_win: components["schemas"]["ProbWithBand"];
+            prob_over_2_5: components["schemas"]["ProbWithBand"];
+            /** Rest Days Away */
+            rest_days_away: number;
+            /** Rest Days Home */
+            rest_days_home: number;
+            /**
+             * Scoreline Matrix
+             * @description Ensemble goals matrix [home][away]; sums to ~1 including the tail.
+             */
+            scoreline_matrix: number[][];
+            venue: components["schemas"]["VenueInfo"];
+            /** Why */
+            why: components["schemas"]["Attribution"][];
         };
         /** MatchPrediction */
         MatchPrediction: {
@@ -291,6 +434,54 @@ export interface components {
             scoreline_matrix: number[][];
             /** Uncertainty Score */
             uncertainty_score: number;
+        };
+        /** MatchTimeline */
+        MatchTimeline: {
+            /**
+             * Contract
+             * @description Which contract the series prices, e.g. 'home win'.
+             */
+            contract: string;
+            /** Events */
+            events: components["schemas"]["TimelineEvent"][];
+            /** Match Id */
+            match_id: string;
+            /** Points */
+            points: components["schemas"]["TimelinePoint"][];
+        };
+        /** ModelProbs */
+        ModelProbs: {
+            /** Model */
+            model: string;
+            /** P Away */
+            p_away: number;
+            /** P Btts */
+            p_btts: number;
+            /** P Draw */
+            p_draw: number;
+            /** P Home */
+            p_home: number;
+            /** P Over 2 5 */
+            p_over_2_5: number;
+            /** Version */
+            version: string;
+            /**
+             * Weight
+             * @description Ensemble weight in force for this market type; null for the market baseline row.
+             */
+            weight: number | null;
+        };
+        /**
+         * ProbWithBand
+         * @description A probability may not travel without its uncertainty (ADR-0013).
+         */
+        ProbWithBand: {
+            /** Hi */
+            hi: number;
+            /** Lo */
+            lo: number;
+            /** P */
+            p: number;
         };
         /** Provenance */
         Provenance: {
@@ -367,6 +558,34 @@ export interface components {
             /** Total Runs */
             total_runs: number;
         };
+        /** TimelineEvent */
+        TimelineEvent: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "lineup" | "goal_elsewhere" | "news";
+            /** Label */
+            label: string;
+            /** Ts Utc */
+            ts_utc: string;
+        };
+        /** TimelinePoint */
+        TimelinePoint: {
+            /** Fair */
+            fair: number;
+            /** Hi */
+            hi: number;
+            /** Lo */
+            lo: number;
+            /**
+             * Market
+             * @description Market mid for the contract; null if no quote.
+             */
+            market: number | null;
+            /** Ts Utc */
+            ts_utc: string;
+        };
         /** ValidationError */
         ValidationError: {
             /** Context */
@@ -379,6 +598,25 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** VenueInfo */
+        VenueInfo: {
+            /** Altitude M */
+            altitude_m: number;
+            /** City */
+            city: string;
+            /**
+             * Heat Risk
+             * @enum {string}
+             */
+            heat_risk: "low" | "moderate" | "high";
+            /** Name */
+            name: string;
+            /**
+             * Tz
+             * @description IANA zone of the venue, e.g. America/Mexico_City.
+             */
+            tz: string;
         };
         /** VenueStatus */
         VenueStatus: {
@@ -487,6 +725,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_list_MatchPrediction__"];
+                };
+            };
+        };
+    };
+    get_match_detail_api_v1_matches__match_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                match_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_MatchDetail_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_match_timeline_api_v1_matches__match_id__timeline_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                match_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_MatchTimeline_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

@@ -1,6 +1,42 @@
 {
   "components": {
     "schemas": {
+      "Attribution": {
+        "description": "Why the ensemble disagrees with the market, one feature at a time, in\nfootball language. delta_pp is signed percentage points toward `direction`.",
+        "properties": {
+          "delta_pp": {
+            "title": "Delta Pp",
+            "type": "number"
+          },
+          "direction": {
+            "enum": [
+              "home",
+              "draw",
+              "away",
+              "over",
+              "under"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "feature": {
+            "title": "Feature",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "feature",
+          "direction",
+          "delta_pp",
+          "note"
+        ],
+        "title": "Attribution",
+        "type": "object"
+      },
       "Envelope_HealthData_": {
         "properties": {
           "data": {
@@ -47,6 +83,38 @@
           "provenance"
         ],
         "title": "Envelope[LedgerVerification]",
+        "type": "object"
+      },
+      "Envelope_MatchDetail_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/MatchDetail"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          }
+        },
+        "required": [
+          "data",
+          "provenance"
+        ],
+        "title": "Envelope[MatchDetail]",
+        "type": "object"
+      },
+      "Envelope_MatchTimeline_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/MatchTimeline"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          }
+        },
+        "required": [
+          "data",
+          "provenance"
+        ],
+        "title": "Envelope[MatchTimeline]",
         "type": "object"
       },
       "Envelope_RunOut_": {
@@ -303,6 +371,82 @@
         "title": "LedgerVerification",
         "type": "object"
       },
+      "LineupStatus": {
+        "description": "Lineup confirmation is the biggest single information event before\nkickoff; the UI renders its arrival unmissably.",
+        "properties": {
+          "as_of": {
+            "description": "UTC ISO time this status was last checked.",
+            "title": "As Of",
+            "type": "string"
+          },
+          "confirmed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "UTC ISO time official lineups were published, if they were.",
+            "title": "Confirmed At"
+          },
+          "state": {
+            "enum": [
+              "expected",
+              "confirmed"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "as_of"
+        ],
+        "title": "LineupStatus",
+        "type": "object"
+      },
+      "MarketBaseline": {
+        "description": "De-vigged 1X2 from the sharpest available book: the comparison line the\nmodel board is judged against.",
+        "properties": {
+          "as_of": {
+            "title": "As Of",
+            "type": "string"
+          },
+          "overround": {
+            "description": "Total implied prob before de-vig, e.g. 1.045.",
+            "title": "Overround",
+            "type": "number"
+          },
+          "p_away": {
+            "title": "P Away",
+            "type": "number"
+          },
+          "p_draw": {
+            "title": "P Draw",
+            "type": "number"
+          },
+          "p_home": {
+            "title": "P Home",
+            "type": "number"
+          },
+          "venue": {
+            "title": "Venue",
+            "type": "string"
+          }
+        },
+        "required": [
+          "venue",
+          "as_of",
+          "overround",
+          "p_home",
+          "p_draw",
+          "p_away"
+        ],
+        "title": "MarketBaseline",
+        "type": "object"
+      },
       "MarketOpportunity": {
         "properties": {
           "actionability": {
@@ -355,6 +499,136 @@
           "actionability"
         ],
         "title": "MarketOpportunity",
+        "type": "object"
+      },
+      "MatchDetail": {
+        "properties": {
+          "away_team": {
+            "title": "Away Team",
+            "type": "string"
+          },
+          "ensemble": {
+            "$ref": "#/components/schemas/ModelProbs"
+          },
+          "expected_goals_away": {
+            "title": "Expected Goals Away",
+            "type": "number"
+          },
+          "expected_goals_home": {
+            "title": "Expected Goals Home",
+            "type": "number"
+          },
+          "freshness_utc": {
+            "title": "Freshness Utc",
+            "type": "string"
+          },
+          "group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group"
+          },
+          "home_team": {
+            "title": "Home Team",
+            "type": "string"
+          },
+          "kickoff_utc": {
+            "title": "Kickoff Utc",
+            "type": "string"
+          },
+          "lineup": {
+            "$ref": "#/components/schemas/LineupStatus"
+          },
+          "market": {
+            "$ref": "#/components/schemas/MarketBaseline"
+          },
+          "match_id": {
+            "title": "Match Id",
+            "type": "string"
+          },
+          "models": {
+            "description": "Per-model outputs; ensemble is NOT in this list.",
+            "items": {
+              "$ref": "#/components/schemas/ModelProbs"
+            },
+            "title": "Models",
+            "type": "array"
+          },
+          "prob_away_win": {
+            "$ref": "#/components/schemas/ProbWithBand"
+          },
+          "prob_btts": {
+            "$ref": "#/components/schemas/ProbWithBand"
+          },
+          "prob_draw": {
+            "$ref": "#/components/schemas/ProbWithBand"
+          },
+          "prob_home_win": {
+            "$ref": "#/components/schemas/ProbWithBand"
+          },
+          "prob_over_2_5": {
+            "$ref": "#/components/schemas/ProbWithBand"
+          },
+          "rest_days_away": {
+            "title": "Rest Days Away",
+            "type": "integer"
+          },
+          "rest_days_home": {
+            "title": "Rest Days Home",
+            "type": "integer"
+          },
+          "scoreline_matrix": {
+            "description": "Ensemble goals matrix [home][away]; sums to ~1 including the tail.",
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "title": "Scoreline Matrix",
+            "type": "array"
+          },
+          "venue": {
+            "$ref": "#/components/schemas/VenueInfo"
+          },
+          "why": {
+            "items": {
+              "$ref": "#/components/schemas/Attribution"
+            },
+            "title": "Why",
+            "type": "array"
+          }
+        },
+        "required": [
+          "match_id",
+          "group",
+          "home_team",
+          "away_team",
+          "kickoff_utc",
+          "venue",
+          "rest_days_home",
+          "rest_days_away",
+          "lineup",
+          "expected_goals_home",
+          "expected_goals_away",
+          "scoreline_matrix",
+          "prob_home_win",
+          "prob_draw",
+          "prob_away_win",
+          "prob_over_2_5",
+          "prob_btts",
+          "models",
+          "ensemble",
+          "market",
+          "why",
+          "freshness_utc"
+        ],
+        "title": "MatchDetail",
         "type": "object"
       },
       "MatchPrediction": {
@@ -424,6 +698,121 @@
           "freshness_utc"
         ],
         "title": "MatchPrediction",
+        "type": "object"
+      },
+      "MatchTimeline": {
+        "properties": {
+          "contract": {
+            "description": "Which contract the series prices, e.g. 'home win'.",
+            "title": "Contract",
+            "type": "string"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/TimelineEvent"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "match_id": {
+            "title": "Match Id",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/TimelinePoint"
+            },
+            "title": "Points",
+            "type": "array"
+          }
+        },
+        "required": [
+          "match_id",
+          "contract",
+          "points",
+          "events"
+        ],
+        "title": "MatchTimeline",
+        "type": "object"
+      },
+      "ModelProbs": {
+        "properties": {
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "p_away": {
+            "title": "P Away",
+            "type": "number"
+          },
+          "p_btts": {
+            "title": "P Btts",
+            "type": "number"
+          },
+          "p_draw": {
+            "title": "P Draw",
+            "type": "number"
+          },
+          "p_home": {
+            "title": "P Home",
+            "type": "number"
+          },
+          "p_over_2_5": {
+            "title": "P Over 2 5",
+            "type": "number"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          },
+          "weight": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Ensemble weight in force for this market type; null for the market baseline row.",
+            "title": "Weight"
+          }
+        },
+        "required": [
+          "model",
+          "version",
+          "weight",
+          "p_home",
+          "p_draw",
+          "p_away",
+          "p_over_2_5",
+          "p_btts"
+        ],
+        "title": "ModelProbs",
+        "type": "object"
+      },
+      "ProbWithBand": {
+        "description": "A probability may not travel without its uncertainty (ADR-0013).",
+        "properties": {
+          "hi": {
+            "title": "Hi",
+            "type": "number"
+          },
+          "lo": {
+            "title": "Lo",
+            "type": "number"
+          },
+          "p": {
+            "title": "P",
+            "type": "number"
+          }
+        },
+        "required": [
+          "p",
+          "lo",
+          "hi"
+        ],
+        "title": "ProbWithBand",
         "type": "object"
       },
       "Provenance": {
@@ -616,6 +1005,75 @@
         "title": "RunsPage",
         "type": "object"
       },
+      "TimelineEvent": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "lineup",
+              "goal_elsewhere",
+              "news"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "ts_utc": {
+            "title": "Ts Utc",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ts_utc",
+          "kind",
+          "label"
+        ],
+        "title": "TimelineEvent",
+        "type": "object"
+      },
+      "TimelinePoint": {
+        "properties": {
+          "fair": {
+            "title": "Fair",
+            "type": "number"
+          },
+          "hi": {
+            "title": "Hi",
+            "type": "number"
+          },
+          "lo": {
+            "title": "Lo",
+            "type": "number"
+          },
+          "market": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Market mid for the contract; null if no quote.",
+            "title": "Market"
+          },
+          "ts_utc": {
+            "title": "Ts Utc",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ts_utc",
+          "market",
+          "fair",
+          "lo",
+          "hi"
+        ],
+        "title": "TimelinePoint",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -656,6 +1114,45 @@
         "title": "ValidationError",
         "type": "object"
       },
+      "VenueInfo": {
+        "properties": {
+          "altitude_m": {
+            "title": "Altitude M",
+            "type": "integer"
+          },
+          "city": {
+            "title": "City",
+            "type": "string"
+          },
+          "heat_risk": {
+            "enum": [
+              "low",
+              "moderate",
+              "high"
+            ],
+            "title": "Heat Risk",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "tz": {
+            "description": "IANA zone of the venue, e.g. America/Mexico_City.",
+            "title": "Tz",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "city",
+          "tz",
+          "altitude_m",
+          "heat_risk"
+        ],
+        "title": "VenueInfo",
+        "type": "object"
+      },
       "VenueStatus": {
         "properties": {
           "kalshi_enabled": {
@@ -684,7 +1181,6 @@
   "paths": {
     "/api/v1/health": {
       "get": {
-        "description": "Config fences + ledger freshness.\n\nLedger recency is the best available \"is anything happening\" signal today;\nthe per-source freshness matrix arrives in Phase 6 once ingestion actually\nwrites snapshots.",
         "operationId": "get_health_api_v1_health_get",
         "responses": {
           "200": {
@@ -807,6 +1303,84 @@
           }
         },
         "summary": "Get Matches"
+      }
+    },
+    "/api/v1/matches/{match_id}": {
+      "get": {
+        "operationId": "get_match_detail_api_v1_matches__match_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "match_id",
+            "required": true,
+            "schema": {
+              "title": "Match Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_MatchDetail_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Match Detail"
+      }
+    },
+    "/api/v1/matches/{match_id}/timeline": {
+      "get": {
+        "operationId": "get_match_timeline_api_v1_matches__match_id__timeline_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "match_id",
+            "required": true,
+            "schema": {
+              "title": "Match Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_MatchTimeline_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Match Timeline"
       }
     },
     "/api/v1/opportunities": {

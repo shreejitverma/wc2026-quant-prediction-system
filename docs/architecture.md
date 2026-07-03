@@ -52,7 +52,7 @@ We categorize incoming data into tiers based on velocity and structural reliabil
 - **The Point-in-Time (PIT) Gate**: The single most critical component for a quant system. `wc2026.pit` ensures that models trained for a match occurring at $T$ can only access data strictly less than $T$. Any leakage breaks the build pipeline.
 
 ### 2. The Modeling Suite
-The system does not rely on a single model. It relies on a suite of specialized models combined dynamically.
+The system does not rely on a single model. It relies on a suite of specialized models combined dynamically. For a rigorous breakdown of the LaTeX mathematical equations and statistical priors governing these models, please see the **[Mathematical Modeling Suite deep-dive](models.md)**.
 
 ```mermaid
 stateDiagram-v2

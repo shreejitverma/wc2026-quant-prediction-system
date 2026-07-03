@@ -109,7 +109,8 @@ sequenceDiagram
 
 For deep dives into specific engineering and quantitative aspects of the system, refer to the following documents:
 
-- **[docs/architecture.md](docs/architecture.md)** — Deep dive into the data flows, mathematical modeling suite, Monte Carlo simulator, and Execution logic.
+- **[docs/architecture.md](docs/architecture.md)** — Deep dive into the data flows, Monte Carlo simulator, and Execution logic.
+- **[docs/models.md](docs/models.md)** — A rigorous mathematical and statistical breakdown of the predictive modeling suite (Dixon-Coles, Bayesian Hierarchical, State-Space, Ensembling).
 - **[docs/runbook.md](docs/runbook.md)** — The definitive operational manual. Covers deployment, troubleshooting, kill-switches, and CI/CD pipelines.
 - **[frontend/README.md](frontend/README.md)** — Architecture and setup instructions specifically for the Next.js/Zustand/React-Query Operator Console.
 - **[docs/adr/](docs/adr/)** — Architecture Decision Records explaining *why* we chose specific stacks (DuckDB over Postgres, Python over C++ for now).

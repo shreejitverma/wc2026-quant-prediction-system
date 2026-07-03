@@ -69,3 +69,25 @@ export async function fetchLedgerVerify(): Promise<Envelope<LedgerVerification>>
 export async function fetchRuns(): Promise<Envelope<RunsPage>> {
   return unwrap(await client.GET("/api/v1/runs"), "GET /api/v1/runs");
 }
+
+export type MatchDetail = components["schemas"]["MatchDetail"];
+export type MatchTimeline = components["schemas"]["MatchTimeline"];
+export type ModelProbs = components["schemas"]["ModelProbs"];
+export type Attribution = components["schemas"]["Attribution"];
+export type ProbWithBand = components["schemas"]["ProbWithBand"];
+
+export async function fetchMatchDetail(matchId: string): Promise<Envelope<MatchDetail>> {
+  return unwrap(
+    await client.GET("/api/v1/matches/{match_id}", { params: { path: { match_id: matchId } } }),
+    `GET /api/v1/matches/${matchId}`,
+  );
+}
+
+export async function fetchMatchTimeline(matchId: string): Promise<Envelope<MatchTimeline>> {
+  return unwrap(
+    await client.GET("/api/v1/matches/{match_id}/timeline", {
+      params: { path: { match_id: matchId } },
+    }),
+    `GET /api/v1/matches/${matchId}/timeline`,
+  );
+}

@@ -131,3 +131,119 @@ class MarketOpportunity(BaseModel):
     best_ask: float
     edge_after_fees: float
     actionability: Literal["Tradeable", "Watch", "No Edge", "Unsafe", "Stale"]
+
+
+# --- Match Detail (Phase 2). Shapes mirror what the pipeline will persist:
+# ScoreDist matrices per model (models/base.py), meta-ensemble weights
+# (models/meta_ensemble.py), and a de-vigged market baseline (features/market_fv).
+# Served source="mock" until those artifacts exist on disk. ---
+
+
+class VenueInfo(BaseModel):
+    name: str
+    city: str
+    tz: str = Field(description="IANA zone of the venue, e.g. America/Mexico_City.")
+    altitude_m: int
+    heat_risk: Literal["low", "moderate", "high"]
+
+
+class LineupStatus(BaseModel):
+    """Lineup confirmation is the biggest single information event before
+    kickoff; the UI renders its arrival unmissably."""
+
+    state: Literal["expected", "confirmed"]
+    as_of: str = Field(description="UTC ISO time this status was last checked.")
+    confirmed_at: str | None = Field(
+        default=None, description="UTC ISO time official lineups were published, if they were."
+    )
+
+
+class ProbWithBand(BaseModel):
+    """A probability may not travel without its uncertainty (ADR-0013)."""
+
+    p: float
+    lo: float
+    hi: float
+
+
+class ModelProbs(BaseModel):
+    model: str
+    version: str
+    weight: float | None = Field(
+        description="Ensemble weight in force for this market type; null for the market baseline row."
+    )
+    p_home: float
+    p_draw: float
+    p_away: float
+    p_over_2_5: float
+    p_btts: float
+
+
+class MarketBaseline(BaseModel):
+    """De-vigged 1X2 from the sharpest available book: the comparison line the
+    model board is judged against."""
+
+    venue: str
+    as_of: str
+    overround: float = Field(description="Total implied prob before de-vig, e.g. 1.045.")
+    p_home: float
+    p_draw: float
+    p_away: float
+
+
+class Attribution(BaseModel):
+    """Why the ensemble disagrees with the market, one feature at a time, in
+    football language. delta_pp is signed percentage points toward `direction`."""
+
+    feature: str
+    direction: Literal["home", "draw", "away", "over", "under"]
+    delta_pp: float
+    note: str
+
+
+class MatchDetail(BaseModel):
+    match_id: str
+    group: str | None
+    home_team: str
+    away_team: str
+    kickoff_utc: str
+    venue: VenueInfo
+    rest_days_home: int
+    rest_days_away: int
+    lineup: LineupStatus
+    expected_goals_home: float
+    expected_goals_away: float
+    scoreline_matrix: list[list[float]] = Field(
+        description="Ensemble goals matrix [home][away]; sums to ~1 including the tail."
+    )
+    prob_home_win: ProbWithBand
+    prob_draw: ProbWithBand
+    prob_away_win: ProbWithBand
+    prob_over_2_5: ProbWithBand
+    prob_btts: ProbWithBand
+    models: list[ModelProbs] = Field(description="Per-model outputs; ensemble is NOT in this list.")
+    ensemble: ModelProbs
+    market: MarketBaseline
+    why: list[Attribution]
+    freshness_utc: str
+
+
+class TimelinePoint(BaseModel):
+    ts_utc: str
+    market: float | None = Field(description="Market mid for the contract; null if no quote.")
+    fair: float
+    lo: float
+    hi: float
+
+
+class TimelineEvent(BaseModel):
+    ts_utc: str
+    kind: Literal["lineup", "goal_elsewhere", "news"]
+    label: str
+
+
+class MatchTimeline(BaseModel):
+    match_id: str
+    contract: str = Field(description="Which contract the series prices, e.g. 'home win'.")
+    points: list[TimelinePoint]
+    events: list[TimelineEvent]
