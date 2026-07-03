@@ -29,9 +29,6 @@ class PlayerAggregationModel(Model):
         """
         Uses expected lineups (or confirmed XI if close to kickoff) to sum player strengths.
         """
-        home = features.get('home_team', 'Unknown')
-        away = features.get('away_team', 'Unknown')
-        
         # Placeholder logic: without player data, just assume 1.1 xG per team
         exp_hg = 1.1
         exp_ag = 1.1
@@ -41,7 +38,8 @@ class PlayerAggregationModel(Model):
             for j in range(self.max_goals):
                 prob_matrix[i, j] = poisson.pmf(i, exp_hg) * poisson.pmf(j, exp_ag)
                 
-        return ScoreDist(home_team=home, away_team=away, prob_matrix=prob_matrix)
+        prob_matrix /= prob_matrix.sum()
+        return ScoreDist(probs=prob_matrix)
 
     def model_card(self) -> dict:
         return {

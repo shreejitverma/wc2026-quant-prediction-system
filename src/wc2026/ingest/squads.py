@@ -45,7 +45,8 @@ class FBrefScraper:
             
             # Find the 'Standard Stats' table
             # FBref often hides tables in HTML comments to load via JS, but the primary squad table is usually raw
-            tables = pd.read_html(resp.text, match="Standard Stats")
+            from io import StringIO
+            tables = pd.read_html(StringIO(resp.text), match="Standard Stats")
             
             if not tables:
                 return pd.DataFrame()

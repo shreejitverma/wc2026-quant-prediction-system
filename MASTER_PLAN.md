@@ -103,6 +103,7 @@ International data is thin (10 competitive matches/year). Club-season player dat
 | 6 | Market-making & execution engine | ✅ **COMPLETE** |
 | 7 | Evaluation, model racing, backtesting | ✅ **COMPLETE** |
 | 8 | Live operations, in-play, model decay | ✅ **COMPLETE** |
+| 9 | Frontend Operator Console | ✅ **COMPLETE** |
 
 ---
 
@@ -589,13 +590,13 @@ footbal_prediction/
 
 ## Open items / known issues
 
-1. **`crosswalk_teams.yaml` duplicate**: "Mexico" appears twice (groups C and I placeholder). Fix + add assertion test: `assert len(cw.all_canonicals()) == len(set(cw.all_canonicals()))`.
+1. ~~**`crosswalk_teams.yaml` duplicate**: "Mexico" appears twice (groups C and I placeholder). Fix + add assertion test.~~ (Resolved: duplicate removed, test added)
 2. **Bankroll placeholder**: `risk.bankroll_usd=5000.0` is unconfirmed. Update `configs/default.yaml` when confirmed.
 3. **Polymarket WC markets**: not discoverable via Gamma API from US. When token_ids are known, add to `configs/polymarket_slugs.yaml`.
 4. **Kalshi trades endpoint**: requires auth. In scope for paid upgrade (ADR-0007); needed for CLV measurement.
-5. **FBref / StatsBomb Tier 2 data**: not ingested yet. Required for M4 (player-aggregation model). Phase 3.
-6. **Venue/weather data**: altitude, heat interactions not yet ingested. Required for Phase 2 features.
-7. **`git_dirty=True` in all run records**: no initial commit yet. Make the first commit to activate provenance.
+5. ~~**FBref / StatsBomb Tier 2 data**: not ingested yet. Required for M4 (player-aggregation model). Phase 3.~~ (Resolved: Polite FBref scraper built in Sprint 3).
+6. ~~**Venue/weather data**: altitude, heat interactions not yet ingested. Required for Phase 2 features.~~ (Resolved: `venues.py` built using Open-Meteo API).
+7. ~~**`git_dirty=True` in all run records**: no initial commit yet. Make the first commit to activate provenance.~~ (Resolved: Initial git commit completed).
 
 ---
 

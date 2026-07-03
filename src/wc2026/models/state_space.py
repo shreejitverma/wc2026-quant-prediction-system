@@ -83,7 +83,8 @@ class DynamicStateSpaceModel(Model):
             for j in range(self.max_goals):
                 prob_matrix[i, j] = poisson.pmf(i, expected_hg) * poisson.pmf(j, expected_ag)
                 
-        return ScoreDist(home_team=home, away_team=away, prob_matrix=prob_matrix)
+        prob_matrix /= prob_matrix.sum()
+        return ScoreDist(probs=prob_matrix)
 
     def model_card(self) -> dict:
         return {

@@ -1,0 +1,912 @@
+{
+  "components": {
+    "schemas": {
+      "Envelope_HealthData_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/HealthData"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          }
+        },
+        "required": [
+          "data",
+          "provenance"
+        ],
+        "title": "Envelope[HealthData]",
+        "type": "object"
+      },
+      "Envelope_LedgerPage_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/LedgerPage"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          }
+        },
+        "required": [
+          "data",
+          "provenance"
+        ],
+        "title": "Envelope[LedgerPage]",
+        "type": "object"
+      },
+      "Envelope_LedgerVerification_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/LedgerVerification"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          }
+        },
+        "required": [
+          "data",
+          "provenance"
+        ],
+        "title": "Envelope[LedgerVerification]",
+        "type": "object"
+      },
+      "Envelope_RunOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/RunOut"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          }
+        },
+        "required": [
+          "data",
+          "provenance"
+        ],
+        "title": "Envelope[RunOut]",
+        "type": "object"
+      },
+      "Envelope_RunsPage_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/RunsPage"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          }
+        },
+        "required": [
+          "data",
+          "provenance"
+        ],
+        "title": "Envelope[RunsPage]",
+        "type": "object"
+      },
+      "Envelope_list_MarketOpportunity__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/MarketOpportunity"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          }
+        },
+        "required": [
+          "data",
+          "provenance"
+        ],
+        "title": "Envelope[list[MarketOpportunity]]",
+        "type": "object"
+      },
+      "Envelope_list_MatchPrediction__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/MatchPrediction"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          }
+        },
+        "required": [
+          "data",
+          "provenance"
+        ],
+        "title": "Envelope[list[MatchPrediction]]",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HealthData": {
+        "properties": {
+          "data_status": {
+            "description": "'empty' = no ledger entries exist yet (definitive, not an error).",
+            "enum": [
+              "ok",
+              "stale",
+              "empty"
+            ],
+            "title": "Data Status",
+            "type": "string"
+          },
+          "kill_switch_enabled": {
+            "title": "Kill Switch Enabled",
+            "type": "boolean"
+          },
+          "last_ledger_ts_utc": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Ledger Ts Utc"
+          },
+          "ledger_entries": {
+            "title": "Ledger Entries",
+            "type": "integer"
+          },
+          "ledger_staleness_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ledger Staleness Seconds"
+          },
+          "max_data_staleness_seconds": {
+            "title": "Max Data Staleness Seconds",
+            "type": "integer"
+          },
+          "min_edge": {
+            "title": "Min Edge",
+            "type": "number"
+          },
+          "mode": {
+            "enum": [
+              "paper",
+              "live"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "venues": {
+            "$ref": "#/components/schemas/VenueStatus"
+          }
+        },
+        "required": [
+          "mode",
+          "data_status",
+          "ledger_entries",
+          "last_ledger_ts_utc",
+          "ledger_staleness_seconds",
+          "max_data_staleness_seconds",
+          "min_edge",
+          "kill_switch_enabled",
+          "venues"
+        ],
+        "title": "HealthData",
+        "type": "object"
+      },
+      "LedgerEntry": {
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "payload": {
+            "title": "Payload"
+          },
+          "prev_hash": {
+            "title": "Prev Hash",
+            "type": "string"
+          },
+          "row_hash": {
+            "title": "Row Hash",
+            "type": "string"
+          },
+          "seq": {
+            "title": "Seq",
+            "type": "integer"
+          },
+          "ts_utc": {
+            "title": "Ts Utc",
+            "type": "string"
+          }
+        },
+        "required": [
+          "seq",
+          "ts_utc",
+          "kind",
+          "prev_hash",
+          "row_hash",
+          "payload"
+        ],
+        "title": "LedgerEntry",
+        "type": "object"
+      },
+      "LedgerPage": {
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerEntry"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "has_more": {
+            "description": "True if the filter matched more rows than `limit`.",
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "returned": {
+            "title": "Returned",
+            "type": "integer"
+          },
+          "total_entries": {
+            "description": "Entries in the whole ledger, pre-filter.",
+            "title": "Total Entries",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "entries",
+          "total_entries",
+          "returned",
+          "has_more"
+        ],
+        "title": "LedgerPage",
+        "type": "object"
+      },
+      "LedgerVerification": {
+        "properties": {
+          "entries": {
+            "title": "Entries",
+            "type": "integer"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "valid": {
+            "title": "Valid",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "valid",
+          "entries",
+          "path"
+        ],
+        "title": "LedgerVerification",
+        "type": "object"
+      },
+      "MarketOpportunity": {
+        "properties": {
+          "actionability": {
+            "enum": [
+              "Tradeable",
+              "Watch",
+              "No Edge",
+              "Unsafe",
+              "Stale"
+            ],
+            "title": "Actionability",
+            "type": "string"
+          },
+          "best_ask": {
+            "title": "Best Ask",
+            "type": "number"
+          },
+          "best_bid": {
+            "title": "Best Bid",
+            "type": "number"
+          },
+          "edge_after_fees": {
+            "title": "Edge After Fees",
+            "type": "number"
+          },
+          "fair_value": {
+            "title": "Fair Value",
+            "type": "number"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          },
+          "venue": {
+            "enum": [
+              "kalshi",
+              "polymarket"
+            ],
+            "title": "Venue",
+            "type": "string"
+          }
+        },
+        "required": [
+          "venue",
+          "ticker",
+          "fair_value",
+          "best_bid",
+          "best_ask",
+          "edge_after_fees",
+          "actionability"
+        ],
+        "title": "MarketOpportunity",
+        "type": "object"
+      },
+      "MatchPrediction": {
+        "properties": {
+          "away_team": {
+            "title": "Away Team",
+            "type": "string"
+          },
+          "expected_goals_away": {
+            "title": "Expected Goals Away",
+            "type": "number"
+          },
+          "expected_goals_home": {
+            "title": "Expected Goals Home",
+            "type": "number"
+          },
+          "freshness_utc": {
+            "title": "Freshness Utc",
+            "type": "string"
+          },
+          "home_team": {
+            "title": "Home Team",
+            "type": "string"
+          },
+          "match_id": {
+            "title": "Match Id",
+            "type": "string"
+          },
+          "prob_away_win": {
+            "title": "Prob Away Win",
+            "type": "number"
+          },
+          "prob_draw": {
+            "title": "Prob Draw",
+            "type": "number"
+          },
+          "prob_home_win": {
+            "title": "Prob Home Win",
+            "type": "number"
+          },
+          "scoreline_matrix": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "title": "Scoreline Matrix",
+            "type": "array"
+          },
+          "uncertainty_score": {
+            "title": "Uncertainty Score",
+            "type": "number"
+          }
+        },
+        "required": [
+          "match_id",
+          "home_team",
+          "away_team",
+          "expected_goals_home",
+          "expected_goals_away",
+          "prob_home_win",
+          "prob_draw",
+          "prob_away_win",
+          "scoreline_matrix",
+          "uncertainty_score",
+          "freshness_utc"
+        ],
+        "title": "MatchPrediction",
+        "type": "object"
+      },
+      "Provenance": {
+        "properties": {
+          "config_hash": {
+            "description": "Content hash of the active AppConfig.",
+            "title": "Config Hash",
+            "type": "string"
+          },
+          "data_as_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "UTC ISO-8601 timestamp of the newest underlying datum; null = no data yet.",
+            "title": "Data As Of"
+          },
+          "generated_at": {
+            "description": "UTC ISO-8601 time this response was assembled.",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "git_commit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Serving code's git commit.",
+            "title": "Git Commit"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Run that produced the data, if any.",
+            "title": "Run Id"
+          },
+          "source": {
+            "description": "'real' = read from pipeline artifacts; 'mock' = generated placeholder.",
+            "enum": [
+              "real",
+              "mock"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "generated_at",
+          "config_hash"
+        ],
+        "title": "Provenance",
+        "type": "object"
+      },
+      "RunOut": {
+        "description": "A wc2026.runs.RunRecord as stored in the runs ledger, plus its chain position.",
+        "properties": {
+          "config_hash": {
+            "title": "Config Hash",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "data_snapshot_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Snapshot Hash"
+          },
+          "features_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Features Hash"
+          },
+          "git_commit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Git Commit"
+          },
+          "git_dirty": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Git Dirty"
+          },
+          "ledger_seq": {
+            "title": "Ledger Seq",
+            "type": "integer"
+          },
+          "metrics": {
+            "additionalProperties": true,
+            "title": "Metrics",
+            "type": "object"
+          },
+          "model_name": {
+            "title": "Model Name",
+            "type": "string"
+          },
+          "model_version": {
+            "title": "Model Version",
+            "type": "string"
+          },
+          "notes": {
+            "title": "Notes",
+            "type": "string"
+          },
+          "row_hash": {
+            "title": "Row Hash",
+            "type": "string"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "created_at",
+          "git_commit",
+          "git_dirty",
+          "config_hash",
+          "data_snapshot_hash",
+          "features_hash",
+          "model_name",
+          "model_version",
+          "metrics",
+          "notes",
+          "ledger_seq",
+          "row_hash"
+        ],
+        "title": "RunOut",
+        "type": "object"
+      },
+      "RunsPage": {
+        "properties": {
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/RunOut"
+            },
+            "title": "Runs",
+            "type": "array"
+          },
+          "total_runs": {
+            "title": "Total Runs",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "runs",
+          "total_runs"
+        ],
+        "title": "RunsPage",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "VenueStatus": {
+        "properties": {
+          "kalshi_enabled": {
+            "title": "Kalshi Enabled",
+            "type": "boolean"
+          },
+          "polymarket_enabled": {
+            "title": "Polymarket Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "kalshi_enabled",
+          "polymarket_enabled"
+        ],
+        "title": "VenueStatus",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "WC2026 Terminal API",
+    "version": "1.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "description": "Config fences + ledger freshness.\n\nLedger recency is the best available \"is anything happening\" signal today;\nthe per-source freshness matrix arrives in Phase 6 once ingestion actually\nwrites snapshots.",
+        "operationId": "get_health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_HealthData_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Health"
+      }
+    },
+    "/api/v1/ledger": {
+      "get": {
+        "operationId": "read_ledger_api_v1_ledger_get",
+        "parameters": [
+          {
+            "description": "Return entries with seq > after_seq.",
+            "in": "query",
+            "name": "after_seq",
+            "required": false,
+            "schema": {
+              "default": -1,
+              "description": "Return entries with seq > after_seq.",
+              "title": "After Seq",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Filter by entry kind.",
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by entry kind.",
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_LedgerPage_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Ledger"
+      }
+    },
+    "/api/v1/ledger/verify": {
+      "get": {
+        "operationId": "verify_ledger_api_v1_ledger_verify_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_LedgerVerification_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Verify Ledger"
+      }
+    },
+    "/api/v1/matches": {
+      "get": {
+        "operationId": "get_matches_api_v1_matches_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_MatchPrediction__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Matches"
+      }
+    },
+    "/api/v1/opportunities": {
+      "get": {
+        "operationId": "get_opportunities_api_v1_opportunities_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_MarketOpportunity__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Opportunities"
+      }
+    },
+    "/api/v1/runs": {
+      "get": {
+        "operationId": "list_runs_api_v1_runs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_RunsPage_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Runs"
+      }
+    },
+    "/api/v1/runs/{run_id}": {
+      "get": {
+        "operationId": "get_run_api_v1_runs__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_RunOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Run"
+      }
+    }
+  }
+}

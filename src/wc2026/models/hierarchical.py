@@ -114,7 +114,7 @@ class BayesianHierarchicalModel(Model):
             density=True
         )
         
-        return ScoreDist(home_team=home, away_team=away, prob_matrix=prob_matrix)
+        return ScoreDist(probs=prob_matrix)
 
     def model_card(self) -> dict:
         return {

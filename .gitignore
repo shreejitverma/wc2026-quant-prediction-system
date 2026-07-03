@@ -18,3 +18,13 @@ data/runs/
 
 # OS
 .DS_Store
+
+# Benchmarks & Coverage
+.benchmarks/
+.coverage
+.coverage.*
+
+# Temporary scripts
+fix.py
+fix2.py
+fix_tests.py

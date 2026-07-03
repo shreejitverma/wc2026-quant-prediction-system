@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 UV := uv
 
-.PHONY: help setup lock test lint fmt hooks selfcheck verify clean daily news-cycle
+.PHONY: help setup lock test lint fmt hooks selfcheck verify clean daily news-cycle api openapi bootstrap-data
 
 help:
 	@echo "Targets:"
@@ -14,6 +14,9 @@ help:
 	@echo "  verify     lint + test + selfcheck (full gate)"
 	@echo "  daily      [Phase 8] full pipeline (placeholder)"
 	@echo "  news-cycle [Phase 8] event-driven fast path (placeholder)"
+	@echo "  api        run the terminal API (uvicorn, 127.0.0.1:8000)"
+	@echo "  openapi    export OpenAPI schema to frontend/openapi.json"
+	@echo "  bootstrap-data  create data/ ledger+runs artifacts (idempotent)"
 
 setup:
 	$(UV) sync --extra dev
@@ -24,6 +27,11 @@ lock:
 test:
 	$(UV) run pytest
 
+test-cov:
+	$(UV) run pytest --cov=src --cov-fail-under=93
+
+test-bench:
+	$(UV) run pytest tests/benchmarks/ --benchmark-only --benchmark-autosave
 lint:
 	$(UV) run ruff check src tests scripts
 
@@ -44,6 +52,15 @@ daily:
 
 news-cycle:
 	@echo "[Phase 8] news fast-path not implemented yet (lineups/injuries)."
+
+api:
+	$(UV) run uvicorn wc2026.api.server:app --host 127.0.0.1 --port 8000 --reload
+
+openapi:
+	$(UV) run python -m wc2026.api.export_openapi
+
+bootstrap-data:
+	$(UV) run python scripts/bootstrap_api_data.py
 
 clean:
 	rm -rf .pytest_cache .ruff_cache

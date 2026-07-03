@@ -61,9 +61,9 @@ class WalkForwardBacktester:
                 try:
                     score_dist = primary_model.predict_match(match_id, match['date_dt'], features)
                     
-                    p_home = score_dist.prob_home_win()
-                    p_draw = score_dist.prob_draw()
-                    p_away = score_dist.prob_away_win()
+                    p_home = score_dist.p_home_win()
+                    p_draw = score_dist.p_draw()
+                    p_away = score_dist.p_away_win()
                     
                     hg = match['home_score']
                     ag = match['away_score']

@@ -24,6 +24,34 @@ make selfcheck  # end-to-end smoke of the honesty harness
 
 `make verify` is the Phase 0 gate: it must be green before any change lands.
 
+## Terminal UI (API + frontend)
+
+```bash
+make bootstrap-data   # one-time: create data/ ledger+runs artifacts (idempotent)
+make api              # FastAPI on 127.0.0.1:8000 (docs at /docs)
+cd frontend && npm install && npm run dev   # Next.js on localhost:3000
+```
+
+After any API schema change, regenerate the typed client:
+
+```bash
+make openapi                     # export frontend/openapi.json
+cd frontend && npm run gen:api   # regenerate src/lib/api.types.ts
+```
+
+Contract (ADR-0011, ADR-0012): every response is `{data, provenance}`; `provenance.source="mock"` renders a loud MOCK banner and those numbers are not actionable.
+Real endpoints today: `/api/v1/health`, `/api/v1/ledger[...]`, `/api/v1/runs[...]`.
+Mock until the pipeline persists artifacts: `/api/v1/matches`, `/api/v1/opportunities`, `book.*` WS topics.
+Live channel: one multiplexed `WS /api/v1/ws` with topic subscriptions (ADR-0014); topics `health` and `ledger` are real.
+
+Frontend unit tests (honesty primitives, time discipline):
+
+```bash
+cd frontend && npm test
+```
+
+Keyboard: `⌘K` command palette, `⇧⌘K` kill-switch dialog (wired to backend commands in Phase 4).
+
 ## Reproducibility contract
 
 - `uv.lock` is committed; `make setup` installs exactly those versions.

@@ -1,0 +1,176 @@
+"""API layer tests: envelope discipline, real reads, definitive empty states.
+
+The contract under test (ADR-0012):
+  - every response is Envelope[T] with a provenance block;
+  - real endpoints read the same JSONL artifacts the CLI writes;
+  - mock endpoints label themselves source="mock";
+  - empty is a definitive answer (0 entries), never an error.
+"""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime
+from pathlib import Path
+
+import pytest
+from fastapi.testclient import TestClient
+
+from wc2026.api.deps import ApiState, get_state
+from wc2026.api.server import app
+from wc2026.config import AppConfig
+from wc2026.ledger import AppendOnlyLedger
+from wc2026.runs import log_run
+
+KICKOFF = datetime(2026, 6, 11, 18, 0, 0, tzinfo=UTC)
+
+
+@pytest.fixture
+def state(tmp_path: Path) -> ApiState:
+    return ApiState(cfg=AppConfig(), root=tmp_path)
+
+
+@pytest.fixture
+def client(state: ApiState) -> TestClient:
+    app.dependency_overrides[get_state] = lambda: state
+    yield TestClient(app)
+    app.dependency_overrides.clear()
+
+
+def _envelope(body: dict) -> dict:
+    assert set(body) == {"data", "provenance"}
+    prov = body["provenance"]
+    assert prov["source"] in ("real", "mock")
+    assert prov["generated_at"].endswith("+00:00") or prov["generated_at"].endswith("Z")
+    assert prov["config_hash"]
+    return body
+
+
+def test_health_empty_state_is_definitive(client: TestClient) -> None:
+    body = _envelope(client.get("/api/v1/health").json())
+    assert body["provenance"]["source"] == "real"
+    data = body["data"]
+    assert data["mode"] == "paper"  # config fence: paper is the default
+    assert data["data_status"] == "empty"
+    assert data["ledger_entries"] == 0
+    assert data["last_ledger_ts_utc"] is None
+
+
+def test_ledger_empty_returns_zero_not_error(client: TestClient) -> None:
+    body = _envelope(client.get("/api/v1/ledger").json())
+    assert body["data"] == {
+        "entries": [],
+        "total_entries": 0,
+        "returned": 0,
+        "has_more": False,
+    }
+    assert body["provenance"]["data_as_of"] is None
+
+
+def test_ledger_read_filter_paginate(client: TestClient, state: ApiState) -> None:
+    led = AppendOnlyLedger(state.ledger_path)
+    led.append("prediction", {"match": "MEX-CAN", "p_home": 0.42}, ts=KICKOFF)
+    led.append("quote", {"contract": "MEX_WIN", "bid": 0.40, "ask": 0.44}, ts=KICKOFF)
+    led.append("prediction", {"match": "USA-ENG", "p_home": 0.31}, ts=KICKOFF)
+
+    body = _envelope(client.get("/api/v1/ledger").json())
+    assert body["data"]["total_entries"] == 3
+    assert [e["seq"] for e in body["data"]["entries"]] == [0, 1, 2]
+    assert body["provenance"]["data_as_of"] == body["data"]["entries"][-1]["ts_utc"]
+
+    only_pred = client.get("/api/v1/ledger", params={"kind": "prediction"}).json()
+    assert [e["seq"] for e in only_pred["data"]["entries"]] == [0, 2]
+
+    page = client.get("/api/v1/ledger", params={"after_seq": 0, "limit": 1}).json()
+    assert [e["seq"] for e in page["data"]["entries"]] == [1]
+    assert page["data"]["has_more"] is True
+
+
+def test_ledger_verify_detects_tampering(client: TestClient, state: ApiState) -> None:
+    led = AppendOnlyLedger(state.ledger_path)
+    led.append("prediction", {"p": 0.5}, ts=KICKOFF)
+    assert client.get("/api/v1/ledger/verify").json()["data"]["valid"] is True
+
+    text = state.ledger_path.read_text()
+    state.ledger_path.write_text(text.replace("0.5", "0.9"))  # rewrite history
+    assert client.get("/api/v1/ledger/verify").json()["data"]["valid"] is False
+
+
+def test_runs_roundtrip_and_404(client: TestClient, state: ApiState) -> None:
+    rec = log_run(
+        AppendOnlyLedger(state.runs_path),
+        config=state.cfg,
+        model_name="dixon_coles",
+        model_version="1.0.0",
+        metrics={"log_loss": 0.54},
+        notes="test run",
+    )
+
+    body = _envelope(client.get("/api/v1/runs").json())
+    assert body["data"]["total_runs"] == 1
+    run = body["data"]["runs"][0]
+    assert run["run_id"] == rec.run_id
+    assert run["metrics"] == {"log_loss": 0.54}
+    assert run["config_hash"] == rec.config_hash
+
+    detail = client.get(f"/api/v1/runs/{rec.run_id}").json()
+    assert detail["provenance"]["run_id"] == rec.run_id
+
+    missing = client.get("/api/v1/runs/does-not-exist")
+    assert missing.status_code == 404
+    assert missing.json()["detail"]["code"] == "run_not_found"
+
+
+def test_mock_endpoints_are_labeled_and_coherent(client: TestClient) -> None:
+    matches = _envelope(client.get("/api/v1/matches").json())
+    assert matches["provenance"]["source"] == "mock"
+    for m in matches["data"]:
+        assert m["match_id"].startswith("MOCK_")
+        total = m["prob_home_win"] + m["prob_draw"] + m["prob_away_win"]
+        assert total == pytest.approx(1.0, abs=1e-9)
+        matrix_sum = sum(sum(row) for row in m["scoreline_matrix"])
+        assert matrix_sum == pytest.approx(1.0, abs=1e-9)
+
+    opps = _envelope(client.get("/api/v1/opportunities").json())
+    assert opps["provenance"]["source"] == "mock"
+    min_edge = AppConfig().risk.min_edge
+    for o in opps["data"]:
+        if o["actionability"] == "Tradeable":
+            assert o["edge_after_fees"] > min_edge  # mock honors the stay-flat fence
+
+
+def test_ws_subscribe_snapshots(client: TestClient, state: ApiState) -> None:
+    AppendOnlyLedger(state.ledger_path).append("prediction", {"p": 0.5}, ts=KICKOFF)
+    with client.websocket_connect("/api/v1/ws") as ws:
+        ws.send_json({"subscribe": ["health", "book.MOCK-X"]})
+        msgs = [ws.receive_json(), ws.receive_json()]
+
+    by_topic = {m["topic"]: m for m in msgs}
+    assert set(by_topic) == {"health", "book.MOCK-X"}
+
+    health = by_topic["health"]
+    assert health["source"] == "real"
+    assert health["data"]["data"]["ledger_entries"] == 1  # same Envelope as REST
+    assert health["data"]["provenance"]["source"] == "real"
+
+    book = by_topic["book.MOCK-X"]
+    assert book["source"] == "mock"
+    assert len(book["data"]["bids"]) == 5
+
+
+def test_ws_ledger_backfill_from_seq(client: TestClient, state: ApiState) -> None:
+    led = AppendOnlyLedger(state.ledger_path)
+    led.append("prediction", {"p": 0.4}, ts=KICKOFF)
+    led.append("quote", {"bid": 0.40}, ts=KICKOFF)
+    with client.websocket_connect("/api/v1/ws") as ws:
+        ws.send_json({"subscribe": ["ledger"], "after_seq": -1})
+        msg = ws.receive_json()
+
+    assert msg["topic"] == "ledger"
+    assert msg["source"] == "real"
+    assert [e["seq"] for e in msg["data"]["entries"]] == [0, 1]
+
+
+def test_mock_is_deterministic(client: TestClient) -> None:
+    a = client.get("/api/v1/matches").json()["data"]
+    b = client.get("/api/v1/matches").json()["data"]
+    assert [m["expected_goals_home"] for m in a] == [m["expected_goals_home"] for m in b]

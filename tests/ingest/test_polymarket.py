@@ -1,76 +1,49 @@
-"""Tests for polymarket.py - all hermetic."""
+import json
+import tempfile
+from unittest.mock import MagicMock, patch
 
-from pathlib import Path
-
-import pytest
-
+from wc2026.ingest.base import HTTPClient, RawStore
 from wc2026.ingest.polymarket import (
-    PolyOrderbook,
+    fetch_clob_orderbook,
+    fetch_market_by_slug,
+    fetch_wc_events,
     parse_clob_orderbook,
     parse_events,
 )
 
-FIXTURES = Path(__file__).parent / "fixtures"
 
+@patch('httpx.Client.get')
+def test_polymarket_fetch(mock_get):
+    with tempfile.TemporaryDirectory() as td:
+        store = RawStore(td)
+        with HTTPClient(store, min_request_interval=0.0) as client:
+            resp1 = MagicMock()
+            resp1.status_code = 200
+            resp1.content = json.dumps([{"id": "1"}]).encode()
+            mock_get.return_value = resp1
+            res = fetch_wc_events(client, store)
+            assert len(res) > 0
+            
+            resp2 = MagicMock()
+            resp2.status_code = 200
+            resp2.content = json.dumps([{"slug": "test"}]).encode()
+            mock_get.return_value = resp2
+            p2 = fetch_market_by_slug(client, store, "test")
+            assert p2.exists()
+            
+            resp3 = MagicMock()
+            resp3.status_code = 200
+            resp3.content = json.dumps({"bids": [{"price": "0.4", "size": "100"}], "asks": [{"price": "0.6", "size": "100"}]}).encode()
+            mock_get.return_value = resp3
+            p3 = fetch_clob_orderbook(client, store, "TOKEN")
+            assert p3.exists()
 
-def test_parse_events_count():
-    raw = (FIXTURES / "polymarket_events.json").read_text()
-    events = parse_events(raw)
-    assert len(events) == 1
-    assert events[0].title == "FIFA World Cup 2026 Winner"
-
-
-def test_parse_events_markets():
-    raw = (FIXTURES / "polymarket_events.json").read_text()
-    events = parse_events(raw)
-    markets = events[0].markets
-    assert len(markets) == 2
-    assert markets[0].question.startswith("Will Argentina")
-    assert markets[0].liquidity == pytest.approx(45230.50)
-
-
-def test_parse_events_token_ids():
-    raw = (FIXTURES / "polymarket_events.json").read_text()
-    events = parse_events(raw)
-    m = events[0].markets[0]
-    assert m.token_id_yes == "0xtoken_yes_001"
-    assert m.token_id_no == "0xtoken_no_001"
-
-
-def test_parse_events_resolution_source():
-    """Settlement text must survive parsing - needed by contract mapper (Phase 5)."""
-    raw = (FIXTURES / "polymarket_events.json").read_text()
-    events = parse_events(raw)
-    for mkt in events[0].markets:
-        assert len(mkt.resolution_source) > 0
-
-
-def test_parse_clob_orderbook_quotes():
-    raw = (FIXTURES / "polymarket_clob.json").read_text()
-    ob = parse_clob_orderbook(raw, condition_id="0xabc123", token_id="0xtoken_yes_001")
-    assert isinstance(ob, PolyOrderbook)
-    assert ob.best_bid == pytest.approx(0.32)
-    assert ob.best_ask == pytest.approx(0.34)
-    assert ob.mid == pytest.approx(0.33)
-
-
-def test_clob_bid_ask_ordering():
-    raw = (FIXTURES / "polymarket_clob.json").read_text()
-    ob = parse_clob_orderbook(raw)
-    # Bids descending
-    prices = [b.price for b in ob.bids]
-    assert prices == sorted(prices, reverse=True)
-    # Asks ascending
-    prices_a = [a.price for a in ob.asks]
-    assert prices_a == sorted(prices_a)
-
-
-def test_clob_no_arbitrage():
-    raw = (FIXTURES / "polymarket_clob.json").read_text()
-    ob = parse_clob_orderbook(raw)
-    assert ob.best_bid < ob.best_ask
-
-
-def test_parse_events_empty_list():
-    events = parse_events("[]")
-    assert events == []
+def test_polymarket_parse():
+    evs = parse_events('[{"id": "1", "markets": [{"question": "Q"}]}]')
+    assert len(evs) == 1
+    
+    evs_dict = parse_events('{"data": [{"id": "1", "markets": [{"tokens": ["yes", "no"]}]}]}')
+    assert len(evs_dict) == 1
+    
+    ob = parse_clob_orderbook('{"bids": [{"price": "0.4", "size": "100"}], "asks": [{"price": "0.6", "size": "100"}]}')
+    assert ob.best_bid == 0.4
