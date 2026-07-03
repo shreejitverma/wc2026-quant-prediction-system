@@ -94,6 +94,7 @@ nav:
       - Add a Predictive Model: howto/add_model.md
       - Add an Ingestion Pipeline: howto/add_data_source.md
       - Run Backtests & Promotions: howto/backtest_evaluation.md
+      - Docs Maintenance & PR Quality Gate: howto/maintenance_pr.md
   - System Discrepancies: discrepancies.md
   - ADRs Decision Log:
       - ADR Index: adr/README.md
